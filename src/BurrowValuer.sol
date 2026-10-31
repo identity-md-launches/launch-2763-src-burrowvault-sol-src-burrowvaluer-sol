@@ -214,13 +214,19 @@ interface IBurrowValuerSqueekNFT {
     function ownerOf(uint256 tokenId) external view returns (address);
     function level(uint256 tokenId) external view returns (uint8);
 }
+/// @dev Squeekchain staking publishes the mining power of each level. Reading it live keeps
+///      valuation equal to what the chain actually pays for the NFT; no table to drift.
+interface IBurrowValuerStaking {
+    function basePower(address collection, uint8 level) external view returns (uint256);
+}
 
 /// @title BurrowValuer
 /// @notice Values up to 32 distinct Squeek NFTs in SQK base units.
-/// @dev Unaudited, testnet only. Power is an integer, and pricePerPower is SQK
-///      base units (18 decimals) per one power, NOT per 1e18 power. Consequently
+/// @dev Unaudited, testnet only. Power is Squeekchain staking's basePower for the
+///      NFT's level (1000, 2200, 4840, ... on Sepolia), and pricePerPower is SQK base
+///      units (18 decimals) per one power. Consequently
 ///      creditLine = floor(sum(power) * pricePerPower * ltvBps / 10_000).
-///      The collection, power policy, LTV and price band cannot be changed.
+///      The collection, staking source, LTV and price band cannot be changed.
 ///      The owner may only govern price within the band and rate limit, through
 ///      a two-day delay. This contract never holds or moves collateral.
 contract BurrowValuer is BurrowValuerOwnable2Step {
@@ -229,12 +235,14 @@ contract BurrowValuer is BurrowValuerOwnable2Step {
     uint256 public constant MAX_PRICE_CHANGE_BPS = 2_000;
     uint256 public constant PRICE_TIMELOCK = 2 days;
     uint256 public constant MAX_TOKEN_IDS = 32;
+    /// @dev Power per NFT is bounded so 32 NFTs at maxPricePerPower never overflow.
+    uint256 public constant MAX_POWER = 1e24;
 
     IBurrowValuerSqueekNFT public immutable squeekNFT;
+    IBurrowValuerStaking public immutable staking;
     uint256 public immutable minPricePerPower;
     uint256 public immutable maxPricePerPower;
     uint256 public immutable ltvBps;
-    uint256 public immutable maxLevel;
 
     uint256 public pricePerPower;
     uint256 public pendingPricePerPower;
@@ -245,15 +253,11 @@ contract BurrowValuer is BurrowValuerOwnable2Step {
     ///      after an execution. A proposal or cancellation does not change this.
     uint256 public lastPriceChange;
 
-    // Index zero corresponds to NFT level one. There is deliberately no setter.
-    uint256[] private _powerTable;
-
     error InvalidCollection(address collection);
     error InvalidLtvBps(uint256 supplied);
     error InvalidPriceBand(uint256 minimum, uint256 maximum);
-    error InvalidPowerTableLength(uint256 length);
-    error InvalidPower(uint256 level, uint256 supplied, uint256 expected);
-    error PowerTableTooLarge();
+    error InvalidStaking(address staking);
+    error PowerTooLarge(uint256 level, uint256 power);
     error TooManyTokenIds(uint256 supplied);
     error TokenIdsNotStrictlyAscending(uint256 previous, uint256 current);
     error InvalidToken(uint256 tokenId);
@@ -271,51 +275,41 @@ contract BurrowValuer is BurrowValuerOwnable2Step {
 
     /// @param initialOwner Explicit governance address; ownership transfers take two steps.
     /// @param collection The live Squeek ERC721, supplied by the deployer.
-    /// @param powerTable Entry i is power at level i+1: 1000, 3000, 7000, ... .
-    ///        Supply every supported level. Unsupported levels fail closed.
+    /// @param staking_ Squeekchain staking, read for basePower(collection, level).
     /// @param initialPrice Initial SQK base units per power, within the immutable band.
     /// @param minimumPrice Nonzero inclusive floor for pricePerPower.
-    /// @param maximumPrice Inclusive ceiling; must allow a 32-NFT value to fit uint256.
+    /// @param maximumPrice Inclusive ceiling; bounded so 32 NFTs of MAX_POWER fit uint256.
     /// @param initialLtvBps Fixed loan-to-value ratio, at most 6000 basis points.
     constructor(
         address initialOwner,
         address collection,
-        uint256[] memory powerTable,
+        address staking_,
         uint256 initialPrice,
         uint256 minimumPrice,
         uint256 maximumPrice,
         uint256 initialLtvBps
     ) BurrowValuerOwnable(initialOwner) {
         if (collection.code.length == 0) revert InvalidCollection(collection);
-        if (initialLtvBps > MAX_LTV_BPS) revert InvalidLtvBps(initialLtvBps);
+        if (staking_.code.length == 0) revert InvalidStaking(staking_);
+        if (initialLtvBps == 0 || initialLtvBps > MAX_LTV_BPS) revert InvalidLtvBps(initialLtvBps);
         if (minimumPrice == 0 || minimumPrice > maximumPrice) {
             revert InvalidPriceBand(minimumPrice, maximumPrice);
         }
         if (initialPrice < minimumPrice || initialPrice > maximumPrice) {
             revert PriceOutsideBand(initialPrice);
         }
-
-        uint256 count = powerTable.length;
-        if (count == 0 || count > type(uint8).max) revert InvalidPowerTableLength(count);
-        uint256 expected = 1_000;
-        for (uint256 i; i < count; ++i) {
-            if (powerTable[i] != expected) revert InvalidPower(i + 1, powerTable[i], expected);
-            // Bound the aggregate before multiplication; arithmetic must never
-            // panic even for extreme constructor parameters or future prices.
-            if (expected > type(uint256).max / MAX_TOKEN_IDS) revert PowerTableTooLarge();
-            if (i + 1 < count) expected = expected * 2 + 1_000;
-        }
-        if (maximumPrice > type(uint256).max / (expected * MAX_TOKEN_IDS)) {
+        if (maximumPrice > type(uint256).max / (MAX_POWER * MAX_TOKEN_IDS)) {
             revert InvalidPriceBand(minimumPrice, maximumPrice);
         }
+        // Level one must be priced by the staking contract, or nothing can ever be valued.
+        if (IBurrowValuerStaking(staking_).basePower(collection, 1) == 0) revert InvalidStaking(staking_);
 
         squeekNFT = IBurrowValuerSqueekNFT(collection);
+        staking = IBurrowValuerStaking(staking_);
         minPricePerPower = minimumPrice;
         maxPricePerPower = maximumPrice;
         pricePerPower = initialPrice;
         ltvBps = initialLtvBps;
-        maxLevel = count;
-        _powerTable = powerTable;
     }
 
     /// @notice Maximum debt, rounded down once after summing collateral power.
@@ -362,10 +356,13 @@ contract BurrowValuer is BurrowValuerOwnable2Step {
         }
     }
 
-    /// @notice Table lookup for a one-based NFT level, useful for escrow accounting.
-    function powerForLevel(uint256 nftLevel) public view returns (uint256) {
-        if (nftLevel == 0 || nftLevel > maxLevel) revert UnsupportedLevel(nftLevel);
-        return _powerTable[nftLevel - 1];
+    /// @notice Squeekchain's own mining power for a one-based NFT level. Fails closed
+    ///         on levels the chain does not price (returns zero) or prices absurdly.
+    function powerForLevel(uint256 nftLevel) public view returns (uint256 power) {
+        if (nftLevel == 0 || nftLevel > type(uint8).max) revert UnsupportedLevel(nftLevel);
+        power = staking.basePower(address(squeekNFT), uint8(nftLevel));
+        if (power == 0) revert UnsupportedLevel(nftLevel);
+        if (power > MAX_POWER) revert PowerTooLarge(nftLevel, power);
     }
 
     /// @notice Propose a price. Replacing a pending proposal restarts the full delay.

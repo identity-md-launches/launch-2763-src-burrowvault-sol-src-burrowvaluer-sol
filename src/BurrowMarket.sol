@@ -1423,14 +1423,9 @@ contract BurrowMarket is BurrowMarketOwnable2Step, BurrowMarketERC721Holder, Bur
         squeek.safeTransferFrom(address(this), seller, tokenId);
     }
 
-    /// @notice Buy at the current price, using the caller's SQK allowance.
-    /// @dev Use the maxPrice overload to protect against cancellation and relisting
-    /// at a higher price before this transaction is included.
-    function buy(uint256 tokenId) external nonReentrant {
-        _buy(tokenId, type(uint256).max);
-    }
-
     /// @notice Buy a fixed-price listing or auction for no more than maxPrice SQK.
+    /// @dev There is deliberately no unbounded overload: a seller could otherwise cancel
+    /// and relist at any price up to the buyer's allowance ahead of the purchase.
     function buy(uint256 tokenId, uint256 maxPrice) external nonReentrant {
         _buy(tokenId, maxPrice);
     }

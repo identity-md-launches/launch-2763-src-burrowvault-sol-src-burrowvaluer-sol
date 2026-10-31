@@ -11,9 +11,9 @@ import {
     BurrowBalanceDeltaLib,
     BurrowModifyLiquidityParams
 } from "../src/BurrowHook.sol";
-import {BurrowVault, IERC20, IERC721} from "../src/BurrowVault.sol";
+import {BurrowVaultLite} from "../src/BurrowVaultLite.sol";
 import {BurrowValuer} from "../src/BurrowValuer.sol";
-import {BurrowVaultFixture, BurrowTestBase, BurrowTestToken, BurrowSepoliaForkFixture} from "./BurrowVault.t.sol";
+import {BurrowVaultFixture, BurrowTestBase, BurrowTestToken, BurrowSepoliaForkFixture, IERC20, IERC721} from "./Fixtures.t.sol";
 import {BurrowTestFeeSink} from "./BurrowMarket.t.sol";
 
 contract BurrowHookFactory {
@@ -501,12 +501,12 @@ contract BurrowForkSwapRouter {
 contract BurrowHookSepoliaForkTest is BurrowSepoliaForkFixture, BurrowHookMining {
     function testFork_SepoliaRealPoolSwapSettlesFeeIntoVault() public {
         _fork();
-        (BurrowVault v,) = _liveVault();
+        (BurrowVaultLite v,) = _liveVault();
         address lender = addr("fork hook lender");
         deal(SQK, lender, 10000e18);
         vm.startPrank(lender);
         IERC20(SQK).approve(address(v), type(uint256).max);
-        v.deposit(10000e18);
+        v.deposit(10000e18, 0);
         vm.stopPrank();
         BurrowHook h = _mineAndDeploy(MANAGER, SQK, address(v), 100, address(this));
         BurrowTestToken other = new BurrowTestToken();
@@ -554,90 +554,4 @@ interface BurrowLivePositionActions {
 interface BurrowLivePermit2 {
     function approve(address token, address spender, uint160 amount, uint48 expiration) external;
     function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
-
-contract BurrowLPBondSepoliaForkTest is BurrowSepoliaForkFixture {
-    function _mintLP(BurrowPoolKey memory k, BurrowTestToken other, address lpOwner) internal returns (uint256 id) {
-        deal(SQK, lpOwner, 1e24);
-        other.mint(lpOwner, 1e24);
-        id = BurrowLivePositionActions(POSITIONS).nextTokenId();
-        bytes[] memory params = new bytes[](2);
-        // Official v4-periphery Actions: MINT_POSITION (0x02), SETTLE_PAIR (0x0d).
-        params[0] =
-            abi.encode(k, int24(-600), int24(600), uint256(1e21), uint128(1e24), uint128(1e24), lpOwner, bytes(""));
-        params[1] = abi.encode(k.currency0, k.currency1);
-        vm.startPrank(lpOwner);
-        IERC20(SQK).approve(PERMIT2, type(uint256).max);
-        other.approve(PERMIT2, type(uint256).max);
-        BurrowLivePermit2(PERMIT2).approve(SQK, POSITIONS, type(uint160).max, uint48(block.timestamp + 1 days));
-        BurrowLivePermit2(PERMIT2)
-            .approve(address(other), POSITIONS, type(uint160).max, uint48(block.timestamp + 1 days));
-        BurrowLivePositionActions(POSITIONS).modifyLiquidities(abi.encode(hex"020d", params), block.timestamp);
-        vm.stopPrank();
-    }
-
-    function testFork_SepoliaRealPositionPrincipalMatchesRedeemableSQKAndBonds() public {
-        _fork();
-        BurrowTestToken other = new BurrowTestToken();
-        bool sqkIsOne = SQK > address(other);
-        BurrowPoolKey memory k = BurrowPoolKey(
-            BurrowCurrency.wrap(sqkIsOne ? address(other) : SQK),
-            BurrowCurrency.wrap(sqkIsOne ? SQK : address(other)),
-            3000,
-            60,
-            address(0)
-        );
-        BurrowRealPoolManager(MANAGER).initialize(k, uint160(1 << 96));
-        assertEq(BurrowLivePositionActions(POSITIONS).permit2(), PERMIT2, "live Permit2 wiring");
-        assertTrue(BurrowLivePermit2(PERMIT2).DOMAIN_SEPARATOR() != bytes32(0), "live Permit2 responds");
-        address lpOwner = addr("live LP owner");
-        uint256 id = _mintLP(k, other, lpOwner);
-        assertEq(IERC721(POSITIONS).ownerOf(id), lpOwner, "real LP minted");
-        (, BurrowValuer valuer) = _liveVault();
-        BurrowVault v = new BurrowVault(
-            BurrowVault.Config(
-                address(this),
-                SQK,
-                NFT,
-                STAKING,
-                address(valuer),
-                POSITIONS,
-                MANAGER,
-                keccak256(abi.encode(k)),
-                0,
-                1000,
-                1000,
-                10
-            )
-        );
-        uint256 value = v.positionSQKPrincipal(id);
-        assertTrue(value > 0, "real LP contains SQK");
-        // Independently redeem the position on a snapshot. Its actual SQK payout
-        // is the oracle for vault valuation, rather than repeating TickMath here.
-        uint256 snapshot = vm.snapshotState();
-        uint256 before = IERC20(SQK).balanceOf(lpOwner);
-        bytes[] memory params = new bytes[](2);
-        params[0] = abi.encode(id, uint128(0), uint128(0), bytes(""));
-        params[1] = abi.encode(k.currency0, k.currency1, lpOwner);
-        vm.prank(lpOwner);
-        BurrowLivePositionActions(POSITIONS).modifyLiquidities(abi.encode(hex"0311", params), block.timestamp);
-        assertEq(IERC20(SQK).balanceOf(lpOwner) - before, value, "principal equals actual v4 redemption");
-        assertTrue(vm.revertToState(snapshot), "restore LP for bond");
-        address lender = addr("LP bond lender");
-        deal(SQK, lender, 10000e18);
-        vm.startPrank(lender);
-        IERC20(SQK).approve(address(v), type(uint256).max);
-        v.deposit(10000e18);
-        vm.stopPrank();
-        vm.startPrank(lpOwner);
-        IERC721(POSITIONS).approve(address(v), id);
-        uint256 shares = v.bond(POSITIONS, id, 1);
-        vm.stopPrank();
-        assertEq(shares, value + value / 10, "LP discount");
-        assertEq(IERC721(POSITIONS).ownerOf(id), address(v), "treasury retains real LP");
-        vm.warp(block.timestamp + 10 days);
-        vm.prank(lpOwner);
-        assertEq(v.claimBond(), shares, "real LP bond fully vested");
-        assertEq(IERC721(POSITIONS).ownerOf(id), address(v), "claim does not release treasury asset");
-    }
 }

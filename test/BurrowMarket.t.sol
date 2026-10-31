@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 import {BurrowMarket} from "../src/BurrowMarket.sol";
-import {BurrowVault, IERC20, IERC721, ERC721Holder} from "../src/BurrowVault.sol";
+import {BurrowVaultLite} from "../src/BurrowVaultLite.sol";
 import {
     BurrowVaultFixture,
     BurrowTestBase,
     BurrowTestNFT,
     BurrowTestToken,
-    BurrowSepoliaForkFixture
-} from "./BurrowVault.t.sol";
+    BurrowSepoliaForkFixture,
+    IERC20,
+    IERC721,
+    ERC721Holder
+} from "./Fixtures.t.sol";
 
 contract BurrowTestFeeSink {
     BurrowTestToken public immutable token;
@@ -50,11 +53,11 @@ contract BurrowMarketReentrantBuyer is ERC721Holder {
 
     function buy(uint256 id) external {
         token.approve(address(market), type(uint256).max);
-        market.buy(id);
+        market.buy(id, type(uint256).max);
     }
 
     function onERC721Received(address, address, uint256 id, bytes memory) public override returns (bytes4) {
-        (callbackSucceeded, callbackResult) = address(market).call(abi.encodeWithSignature("buy(uint256)", id));
+        (callbackSucceeded, callbackResult) = address(market).call(abi.encodeWithSignature("buy(uint256,uint256)", id, type(uint256).max));
         return this.onERC721Received.selector;
     }
 }
@@ -62,7 +65,7 @@ contract BurrowMarketReentrantBuyer is ERC721Holder {
 contract BurrowMarketRejectingBuyer {
     function buy(BurrowMarket market, BurrowTestToken token, uint256 id) external {
         token.approve(address(market), type(uint256).max);
-        market.buy(id);
+        market.buy(id, type(uint256).max);
     }
 }
 
@@ -100,7 +103,7 @@ contract BurrowMarketTest is BurrowVaultFixture {
         vm.expectEmit(true, true, true, true, address(market));
         emit Sold(1, alice, bob, 100e18, 2.5e18);
         vm.prank(bob);
-        market.buy(1);
+        market.buy(1, type(uint256).max);
         assertEq(token.balanceOf(alice), seller + 97.5e18, "seller net same transaction");
         assertEq(token.balanceOf(bob), buyer - 100e18, "buyer gross");
         assertEq(vault.totalAssets(), backing + 2.5e18, "fee reaches actual vault");
@@ -113,7 +116,7 @@ contract BurrowMarketTest is BurrowVaultFixture {
         assertEq(sellerAfter, address(0), "listing consumed");
         vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 1));
         vm.prank(bob);
-        market.buy(1);
+        market.buy(1, type(uint256).max);
     }
 
     function test_CancelOnlyBySellerRestoresNFTAndCanRelist() public {
@@ -139,10 +142,10 @@ contract BurrowMarketTest is BurrowVaultFixture {
         _list(2, 100e18);
         uint256 backing = vault.totalAssets();
         vm.prank(bob);
-        market.buy(1);
+        market.buy(1, type(uint256).max);
         assertEq(vault.totalAssets(), backing + 2.5e18, "old fee preserved");
         vm.prank(bob);
-        market.buy(2);
+        market.buy(2, type(uint256).max);
         assertEq(vault.totalAssets(), backing + 7.5e18, "new listing fee applied");
     }
 
@@ -241,7 +244,7 @@ contract BurrowMarketTest is BurrowVaultFixture {
         vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 2));
         market.currentPrice(2);
         vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 2));
-        market.buy(2);
+        market.buy(2, type(uint256).max);
         vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 2));
         market.cancel(2);
     }
@@ -263,7 +266,7 @@ contract BurrowMarketTest is BurrowVaultFixture {
             abi.encodeWithSignature("ERC20InsufficientAllowance(address,uint256,uint256)", address(market), 0, 100e18)
         );
         vm.prank(bob);
-        market.buy(1);
+        market.buy(1, type(uint256).max);
         assertEq(nft.ownerOf(1), address(market), "payment failure released NFT");
         assertEq(market.currentPrice(1), 100e18, "payment failure consumed listing");
     }
@@ -285,7 +288,7 @@ contract BurrowMarketTest is BurrowVaultFixture {
         uint256 b = token.balanceOf(bob);
         vm.expectRevert(BurrowMarket.UnexpectedSQKTransfer.selector);
         vm.prank(bob);
-        market.buy(1);
+        market.buy(1, type(uint256).max);
         assertEq(token.balanceOf(bob), b, "taxed payment charged");
         assertEq(market.currentPrice(1), 100e18, "taxed payment consumed listing");
         token.setTax(false);
@@ -300,14 +303,14 @@ contract BurrowMarketTest is BurrowVaultFixture {
         token.approve(address(m), type(uint256).max);
         vm.expectRevert(BurrowMarket.FeeNotCollected.selector);
         vm.prank(bob);
-        m.buy(2);
+        m.buy(2, type(uint256).max);
         assertEq(nft.ownerOf(2), address(m), "noncollecting sink released NFT");
         assertEq(token.balanceOf(bob), b, "sink failure charged buyer");
         bad.setIgnore(false);
         bad.setFail(true);
         vm.expectRevert(BurrowTestFeeSink.DonationRejected.selector);
         vm.prank(bob);
-        m.buy(2);
+        m.buy(2, type(uint256).max);
         assertEq(m.currentPrice(2), 100e18, "rejected donation consumed listing");
     }
 
@@ -339,12 +342,12 @@ contract BurrowMarketTest is BurrowVaultFixture {
         _list(1, 100e18);
         uint256 backing = vault.totalAssets();
         vm.prank(bob);
-        market.buy(1);
+        market.buy(1, type(uint256).max);
         assertEq(vault.totalAssets(), backing, "zero fee");
         market.setFeeBps(500);
         _list(2, 1);
         vm.prank(bob);
-        market.buy(2);
+        market.buy(2, type(uint256).max);
         assertEq(vault.totalAssets(), backing, "rounded zero fee");
     }
 
@@ -371,7 +374,11 @@ contract BurrowMarketTest is BurrowVaultFixture {
     function test_LiquidatorCanAuctionCollateralAndRouteSaleFee() public {
         _open(alice, 10, 1);
         _borrow(alice, 600e18);
+        // Liquidation opens at 75% of value: two governed 20% cuts take value from 1000 to 640.
         valuer.proposePricePerPower(0.8e18);
+        vm.warp(block.timestamp + 2 days);
+        valuer.executePricePerPower();
+        valuer.proposePricePerPower(0.64e18);
         vm.warp(block.timestamp + 2 days);
         valuer.executePricePerPower();
         vm.warp(block.timestamp + 1 hours);
@@ -394,7 +401,7 @@ contract BurrowMarketHandler is BurrowTestBase {
     BurrowMarket public immutable market;
     BurrowTestNFT public immutable nft;
     BurrowTestToken public immutable token;
-    BurrowVault public immutable vault;
+    BurrowVaultLite public immutable vault;
     address[3] public actors;
     address[9] public modelOwner;
     address[9] public seller;
@@ -405,7 +412,7 @@ contract BurrowMarketHandler is BurrowTestBase {
     uint256 public expectedFees;
     bool public badSettlement;
 
-    constructor(BurrowMarket m, BurrowTestNFT n, BurrowTestToken t, BurrowVault v) {
+    constructor(BurrowMarket m, BurrowTestNFT n, BurrowTestToken t, BurrowVaultLite v) {
         market = m;
         nft = n;
         token = t;
@@ -550,7 +557,7 @@ contract BurrowMarketInvariantTest is BurrowVaultFixture {
 contract BurrowMarketSepoliaForkTest is BurrowSepoliaForkFixture {
     function testFork_SepoliaRealNFTSalePaysRealSQKToVault() public {
         _fork();
-        (BurrowVault v,) = _liveVault();
+        (BurrowVaultLite v,) = _liveVault();
         BurrowMarket m = new BurrowMarket(SQK, NFT, address(v), address(this), 250, 1 days);
         address holder = IERC721(NFT).ownerOf(2);
         address buyer = addr("fork market buyer");
@@ -558,7 +565,7 @@ contract BurrowMarketSepoliaForkTest is BurrowSepoliaForkFixture {
         deal(SQK, lender, 10000e18);
         vm.startPrank(lender);
         IERC20(SQK).approve(address(v), type(uint256).max);
-        v.deposit(10000e18);
+        v.deposit(10000e18, 0);
         vm.stopPrank();
         vm.startPrank(holder);
         IERC721(NFT).approve(address(m), 2);
