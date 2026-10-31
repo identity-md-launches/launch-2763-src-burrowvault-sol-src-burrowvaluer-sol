@@ -1,0 +1,224 @@
+{
+  "checkedAt": "2026-10-31T14:14:26.439Z",
+  "passed": true,
+  "results": [
+    {
+      "name": "vault",
+      "address": "0xB63AbAb9019fa0Db4A3Ab1824C5E5Fa7171f1472",
+      "source": "https://sourcify.dev/server/v2/contract/11155111/0xB63AbAb9019fa0Db4A3Ab1824C5E5Fa7171f1472?fields=all",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "sources": [
+        {
+          "path": "src/BurrowVaultLite.sol",
+          "identical": true,
+          "sha256": "190070341f6776a6995b82729a6e8a512d87040f5d3000e612f3d5fa8f774731"
+        }
+      ],
+      "checkedSelectors": [
+        {
+          "signature": "allowance(address,address)",
+          "matches": true
+        },
+        {
+          "signature": "approve(address,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "balanceOf(address)",
+          "matches": true
+        },
+        {
+          "signature": "borrow(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "closePosition()",
+          "matches": true
+        },
+        {
+          "signature": "convertToAssets(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "creditLineOf(address)",
+          "matches": true
+        },
+        {
+          "signature": "debtOf(address)",
+          "matches": true
+        },
+        {
+          "signature": "deposit(uint256,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "idle()",
+          "matches": true
+        },
+        {
+          "signature": "liquidate(address)",
+          "matches": true
+        },
+        {
+          "signature": "liquidationThresholdOf(address)",
+          "matches": true
+        },
+        {
+          "signature": "openPosition(uint256[])",
+          "matches": true
+        },
+        {
+          "signature": "positionIds(address)",
+          "matches": true
+        },
+        {
+          "signature": "positionPower(address)",
+          "matches": true
+        },
+        {
+          "signature": "ratePerSecond()",
+          "matches": true
+        },
+        {
+          "signature": "repay(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "sweepRewards()",
+          "matches": true
+        },
+        {
+          "signature": "totalAssets()",
+          "matches": true
+        },
+        {
+          "signature": "totalBorrows()",
+          "matches": true
+        },
+        {
+          "signature": "totalPower()",
+          "matches": true
+        },
+        {
+          "signature": "totalSupply()",
+          "matches": true
+        },
+        {
+          "signature": "unsettled()",
+          "matches": true
+        },
+        {
+          "signature": "withdraw(uint256,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "Donated(address,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "Opened(address,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "Swept(uint256,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "Transfer(address,address,uint256)",
+          "matches": true
+        }
+      ],
+      "chain": {
+        "runtimeBytes": 10111,
+        "gasUsed": 16205233,
+        "gasUnderCap": true,
+        "deploymentSucceeded": true
+      }
+    },
+    {
+      "name": "valuer",
+      "address": "0x8F677a270fFd8769C01876216991c98561302C7b",
+      "source": "https://sourcify.dev/server/v2/contract/11155111/0x8F677a270fFd8769C01876216991c98561302C7b?fields=all",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "sources": [
+        {
+          "path": "src/BurrowValuer.sol",
+          "identical": true,
+          "sha256": "5a2654051f43ce35faa30c05a154f2c52821d54092c015c28d73de7fa3706309"
+        }
+      ],
+      "checkedSelectors": [
+        {
+          "signature": "lastPriceChange()",
+          "matches": true
+        },
+        {
+          "signature": "ltvBps()",
+          "matches": true
+        },
+        {
+          "signature": "powerForLevel(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "pricePerPower()",
+          "matches": true
+        }
+      ],
+      "chain": {
+        "runtimeBytes": 3513,
+        "gasUsed": 5894112,
+        "gasUnderCap": true,
+        "deploymentSucceeded": true
+      }
+    },
+    {
+      "name": "market",
+      "address": "0xDF0b997E701AaB73e69417e1910a9a9D93F0De8d",
+      "source": "https://sourcify.dev/server/v2/contract/11155111/0xDF0b997E701AaB73e69417e1910a9a9D93F0De8d?fields=all",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "sources": [
+        {
+          "path": "src/BurrowMarket.sol",
+          "identical": true,
+          "sha256": "e7c1958f4f139f16e659c582cf33ef5256c92a229a90d68f8c3bdda5b0e0affa"
+        }
+      ],
+      "checkedSelectors": [],
+      "chain": {
+        "runtimeBytes": 6438,
+        "gasUsed": 10516014,
+        "gasUnderCap": true,
+        "deploymentSucceeded": true
+      }
+    },
+    {
+      "name": "hook",
+      "address": "0x9e0827db5831c49F9390707b467aA12A76E74044",
+      "source": "https://sourcify.dev/server/v2/contract/11155111/0x9e0827db5831c49F9390707b467aA12A76E74044?fields=all",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "sources": [
+        {
+          "path": "src/BurrowHook.sol",
+          "identical": true,
+          "sha256": "b54265cfc9170be53b7c6a5b1511e62d8f4bd559358cba967d8feb065848b957"
+        }
+      ],
+      "checkedSelectors": [],
+      "chain": {
+        "runtimeBytes": 5187,
+        "gasUsed": 8588909,
+        "gasUnderCap": true,
+        "deploymentSucceeded": true
+      }
+    }
+  ]
+}

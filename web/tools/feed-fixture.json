@@ -1,0 +1,69 @@
+{
+  "status": {
+    "measurement": {
+      "freshness": "online",
+      "observedAt": "2026-10-31T14:08:35.611Z",
+      "receivedAt": "2026-10-31T14:08:36.162Z",
+      "staleAfterSeconds": 120,
+      "counterEpoch": "c011f01a-93ba-45ff-8579-619ddfdf40ec",
+      "cumulativeWorkUnits": "58518",
+      "provenance": "hardware",
+      "coreStatus": "IDLE",
+      "rpmMilli": 0,
+      "speedMmPerSecond": 0,
+      "distanceMm": 0
+    }
+  },
+  "core": {
+    "configuration": {
+      "genesisTimestamp": "1793022600",
+      "roundDuration": "600"
+    },
+    "core": {
+      "blockHeight": "5204"
+    }
+  },
+  "economy/state": {
+    "staking": {
+      "paused": false,
+      "launchReady": true,
+      "totalStakedBaseUnits": "0",
+      "freshPrincipalBaseUnits": "0",
+      "freshUntilRound": "0",
+      "totalNftPower": "96800000000000000000000",
+      "totalSqkPower": "0",
+      "sqkPerPower": "40000000000000000000",
+      "referencePower": "1000000000000000000000",
+      "exitPolicy": {
+        "minBps": 200,
+        "maxBps": 6000,
+        "saturationBps": 2000,
+        "windowDays": 7,
+        "pressureFloorBaseUnits": "21000000000000000000000000"
+      },
+      "rewards": {
+        "fundedBaseUnits": "99232056022907294922965",
+        "paidBaseUnits": "37214233922409084355412",
+        "compoundedBaseUnits": "0",
+        "remainingBaseUnits": "0",
+        "rewardIndex": "1156721036321544994044080890318991084853",
+        "streamRateBaseUnitsPerSecond": "0",
+        "streamEndsAt": "0"
+      }
+    }
+  },
+  "settlements?range=24h": {
+    "summary": {
+      "settlementCount": "139",
+      "activeRoundCount": "29",
+      "workAdded": "12561",
+      "completedBlockCount": "1069",
+      "archivedSettlementCount": "129"
+    },
+    "mining": {
+      "processedThroughRound": "721",
+      "rangeMintedBaseUnits": "4254138392592404334085778",
+      "miningMintedBaseUnits": "20709575486483509966868466"
+    }
+  }
+}

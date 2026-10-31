@@ -1,0 +1,12 @@
+{
+  "tickerAt1200": {
+    "width": 686,
+    "scrollWidth": 844,
+    "left": 0,
+    "overflow": "auto"
+  },
+  "finalKpiReachable": true,
+  "reducedMotionStopsWheel": true,
+  "liveRpmMovesWheel": true,
+  "preferenceChangeStopsWheel": true
+}

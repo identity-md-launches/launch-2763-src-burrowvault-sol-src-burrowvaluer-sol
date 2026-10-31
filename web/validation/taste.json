@@ -1,0 +1,124 @@
+{
+  "at": "2026-10-31T14:32:21.679Z",
+  "target": "dist",
+  "checks": [
+    {
+      "name": "render",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 65939,
+      "output": "renders, no script errors or missing local files\nexternal hosts: ethereum-sepolia-rpc.publicnode.com, api.squeekchain.com, sepolia.gateway.tenderly.co"
+    },
+    {
+      "name": "layout",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "no horizontal scroll at 320, 390 or 1440\nno text box overlaps another\nno floating control covers text\nno text cut off by overflow: hidden"
+    },
+    {
+      "name": "targets",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "all 20 controls at least 24px or spaced at 390\n18 under the 44px comfortable size"
+    },
+    {
+      "name": "contrast",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "all measured text meets 4.5:1 (3:1 large)\n2 text boxes over images, video, canvas or gradients not measured"
+    },
+    {
+      "name": "casing",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 1,
+      "output": "no all-caps text in content"
+    },
+    {
+      "name": "tracking",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "letter-spacing natural in content (display type may run tight)"
+    },
+    {
+      "name": "eyebrows",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 1,
+      "output": "no kicker labels above headings"
+    },
+    {
+      "name": "type-sizes",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 1,
+      "output": "390: 5 sizes in use, 7 with one-offs (12px\u00d725, 13px\u00d785, 14px\u00d710, 15px\u00d711, 16px\u00d75, 20px\u00d71, 36px\u00d71)\n1440: 5 sizes in use, 7 with one-offs (12px\u00d729, 13px\u00d745, 14px\u00d78, 15px\u00d710, 16px\u00d76, 20px\u00d71, 48px\u00d71)\nbar: 6 sizes used more than once, 8 counting one-offs, per width"
+    },
+    {
+      "name": "type-faces",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "families (2): geist, geist mono\nweights (2): 400, 500\nweight 500 outside mono (noted, not counted): 17, e.g. body > header.top > div.topin > span.brand:nth-of-type(1) \"Burrow\""
+    },
+    {
+      "name": "glyphs",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "no em dashes or emoji in text"
+    },
+    {
+      "name": "slogans",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 1,
+      "output": "1 two-beat lines; a stack is four or more, so keep the best and cut the rest:\n\"Feed unavailable. Retrying automatically.\" (#chain-panel > div.tw:nth-of-type(2))"
+    },
+    {
+      "name": "repetition",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 1,
+      "output": "no repeated lines"
+    },
+    {
+      "name": "copy-budget",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "prose on the first screen: 23 words at 390 (bar 60), 63 at 1440 (bar 90)\nall words on the first screen: 66 at 390, 159 at 1440\nwhole page: 381 words, 203 of them prose"
+    },
+    {
+      "name": "chrome",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "border and shadow together: 0\ncards inside cards: 0\ngradient text: 0"
+    },
+    {
+      "name": "motion",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "transition: all on 0 elements\nendless animations: 0; still running with reduced motion: 0"
+    },
+    {
+      "name": "share",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 0,
+      "output": "title \"Burrow\", favicon, og:title, og:image, description"
+    }
+  ],
+  "external": [
+    "ethereum-sepolia-rpc.publicnode.com",
+    "api.squeekchain.com",
+    "sepolia.gateway.tenderly.co"
+  ],
+  "errors": []
+}

@@ -1,0 +1,22 @@
+{
+  "name": "burrow-static-site",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The operator's Burrow v2 static UI. No compilation is required to serve it.",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "typecheck": "node tools/check.mjs",
+    "test": "node tools/test.mjs",
+    "preview": "node tools/preview.mjs",
+    "vendor": "node tools/vendor.mjs"
+  },
+  "devDependencies": {
+    "@coinbase/wallet-sdk": "4.3.7",
+    "@types/three": "0.160.0",
+    "esbuild": "0.25.12",
+    "playwright": "1.56.1",
+    "three": "0.160.0",
+    "typescript": "5.9.3"
+  }
+}

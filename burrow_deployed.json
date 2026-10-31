@@ -1,0 +1,79 @@
+{
+  "chainId": 11155111,
+  "network": "Ethereum Sepolia",
+  "reference": "https://burrow-squeek.vercel.app",
+  "contracts": {
+    "vault": {
+      "address": "0xB63AbAb9019fa0Db4A3Ab1824C5E5Fa7171f1472",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "verifiedAt": "2026-10-31T11:46:27Z",
+      "deployment": {
+        "transactionHash": "0x2604268da92c035081c43842cf7f377531188cb317d277e85c273ee6a846e18b",
+        "blockNumber": "12033611",
+        "transactionIndex": "30",
+        "deployer": "0xbC8744370bCb6D5AbF5dE8B4086ecfBB4C5629C3"
+      },
+      "sources": {
+        "src/BurrowVaultLite.sol": {
+          "sha256": "190070341f6776a6995b82729a6e8a512d87040f5d3000e612f3d5fa8f774731"
+        }
+      }
+    },
+    "valuer": {
+      "address": "0x8F677a270fFd8769C01876216991c98561302C7b",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "verifiedAt": "2026-10-31T11:46:21Z",
+      "deployment": {
+        "transactionHash": "0xf2b8d05b281f1ea8a8ce091ee798ad6b91693015cf216078b68268a39fb50d6d",
+        "blockNumber": "12033610",
+        "transactionIndex": "97",
+        "deployer": "0xbC8744370bCb6D5AbF5dE8B4086ecfBB4C5629C3"
+      },
+      "sources": {
+        "src/BurrowValuer.sol": {
+          "sha256": "5a2654051f43ce35faa30c05a154f2c52821d54092c015c28d73de7fa3706309"
+        }
+      }
+    },
+    "market": {
+      "address": "0xDF0b997E701AaB73e69417e1910a9a9D93F0De8d",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "verifiedAt": "2026-10-31T11:46:47Z",
+      "deployment": {
+        "transactionHash": "0x654af3f07ea1e4860cb7d0130b0f9251beb23efea49d0a2fe6b22347f5764aed",
+        "blockNumber": "12033612",
+        "transactionIndex": "74",
+        "deployer": "0xbC8744370bCb6D5AbF5dE8B4086ecfBB4C5629C3"
+      },
+      "sources": {
+        "src/BurrowMarket.sol": {
+          "sha256": "e7c1958f4f139f16e659c582cf33ef5256c92a229a90d68f8c3bdda5b0e0affa"
+        }
+      }
+    },
+    "hook": {
+      "address": "0x9e0827db5831c49F9390707b467aA12A76E74044",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "verifiedAt": "2026-10-31T11:46:59Z",
+      "deployment": {
+        "transactionHash": "0x17a454a0dbd91ef6c1c176770bbfa6024fa3bcec2fa9a4435dd0d131b3b62180",
+        "blockNumber": "12033613",
+        "transactionIndex": "73",
+        "deployer": "0xbC8744370bCb6D5AbF5dE8B4086ecfBB4C5629C3"
+      },
+      "sources": {
+        "src/BurrowHook.sol": {
+          "sha256": "b54265cfc9170be53b7c6a5b1511e62d8f4bd559358cba967d8feb065848b957"
+        }
+      }
+    }
+  }
+}

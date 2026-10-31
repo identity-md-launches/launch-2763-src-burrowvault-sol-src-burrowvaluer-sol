@@ -1,0 +1,16 @@
+{
+  "measure": "Added files plus full modified file contents; excludes this small report itself and ignores scratch/input directories.",
+  "submissionPaths": 88,
+  "contentBytes": 2956955,
+  "budgetBytes": 8388608,
+  "withinBudget": true,
+  "distFiles": 37,
+  "distBytes": 1354649,
+  "modifiedExistingPaths": [
+    "README.md"
+  ],
+  "sourceExportIdentical": true,
+  "ignoreFilesChanged": false,
+  "dependencyTreesIncluded": false,
+  "gitSubmodulesAdded": false
+}

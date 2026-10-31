@@ -1,0 +1,586 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>test/BurrowMarket.t.sol · Burrow source</title><meta name="description" content="Burrow v2 source, tests and deployment record"><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="../styles.css"><style>pre{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:16px;overflow:auto;font:12px/18px var(--mono);tab-size:4}.wrap{max-width:1100px}.source-address{overflow-wrap:anywhere;white-space:normal}.source-table{overflow:auto}.source-table a{display:inline-block;min-height:24px}.source-list a{border:0}.source-header{flex-wrap:wrap;height:auto;min-height:64px;gap:8px;padding-block:12px}.source-header .chip{white-space:normal}</style></head><body><header class="top"><div class="topin source-header"><a class="brand" href="../index.html" style="border:0">Burrow</a><span class="chip">source, exactly what is deployed</span><span class="sp"></span><a class="chip" href="./index.html">all files</a></div></header><main class="wrap"><section class="panel"><div class="ph"><h1 style="font-size:16px">test/BurrowMarket.t.sol</h1></div><pre tabindex="0" aria-label="test/BurrowMarket.t.sol source"><code>// SPDX-License-Identifier: MIT
+pragma solidity 0.8.26;
+import {BurrowMarket} from &quot;../src/BurrowMarket.sol&quot;;
+import {BurrowVaultLite} from &quot;../src/BurrowVaultLite.sol&quot;;
+import {
+    BurrowVaultFixture,
+    BurrowTestBase,
+    BurrowTestNFT,
+    BurrowTestToken,
+    BurrowSepoliaForkFixture,
+    IERC20,
+    IERC721,
+    ERC721Holder
+} from &quot;./Fixtures.t.sol&quot;;
+
+contract BurrowTestFeeSink {
+    BurrowTestToken public immutable token;
+    bool public fail;
+    bool public ignore;
+    uint256 public donated;
+    error DonationRejected();
+
+    constructor(BurrowTestToken t) {
+        token = t;
+    }
+
+    function setFail(bool b) external {
+        fail = b;
+    }
+
+    function setIgnore(bool b) external {
+        ignore = b;
+    }
+
+    function donate(uint256 amount) external {
+        if (fail) revert DonationRejected();
+        if (ignore) return;
+        token.transferFrom(msg.sender, address(this), amount);
+        donated += amount;
+    }
+}
+
+contract BurrowMarketReentrantBuyer is ERC721Holder {
+    BurrowMarket public immutable market;
+    BurrowTestToken public immutable token;
+    bool public callbackSucceeded;
+    bytes public callbackResult;
+
+    constructor(BurrowMarket m, BurrowTestToken t) {
+        market = m;
+        token = t;
+    }
+
+    function buy(uint256 id) external {
+        token.approve(address(market), type(uint256).max);
+        market.buy(id, type(uint256).max);
+    }
+
+    function onERC721Received(address, address, uint256 id, bytes memory) public override returns (bytes4) {
+        (callbackSucceeded, callbackResult) = address(market).call(abi.encodeWithSignature(&quot;buy(uint256,uint256)&quot;, id, type(uint256).max));
+        return this.onERC721Received.selector;
+    }
+}
+
+contract BurrowMarketRejectingBuyer {
+    function buy(BurrowMarket market, BurrowTestToken token, uint256 id) external {
+        token.approve(address(market), type(uint256).max);
+        market.buy(id, type(uint256).max);
+    }
+}
+
+contract BurrowMarketTest is BurrowVaultFixture {
+    BurrowMarket internal market;
+    event Listed(uint256 indexed tokenId, address indexed seller, uint256 price, uint256 feeBps);
+    event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price, uint256 fee);
+
+    function setUp() public {
+        _setup(0);
+        _seed(10000e18);
+        market = new BurrowMarket(address(token), address(nft), address(vault), address(this), 250, 1 days);
+        vm.prank(alice);
+        nft.setApprovalForAll(address(market), true);
+        vm.prank(bob);
+        token.approve(address(market), type(uint256).max);
+        nft.mint(alice, 1, 1);
+        nft.mint(alice, 2, 2);
+    }
+
+    function _list(uint256 id, uint256 price) internal {
+        vm.prank(alice);
+        market.list(id, price);
+    }
+
+    function test_FixedSalePaysSellerAndRaisesVaultSharePriceAtomically() public {
+        uint256 backing = vault.totalAssets();
+        uint256 supply = vault.totalSupply();
+        uint256 seller = token.balanceOf(alice);
+        uint256 buyer = token.balanceOf(bob);
+        vm.expectEmit(true, true, false, true, address(market));
+        emit Listed(1, alice, 100e18, 250);
+        _list(1, 100e18);
+        assertEq(nft.ownerOf(1), address(market), &quot;listing escrow&quot;);
+        vm.expectEmit(true, true, true, true, address(market));
+        emit Sold(1, alice, bob, 100e18, 2.5e18);
+        vm.prank(bob);
+        market.buy(1, type(uint256).max);
+        assertEq(token.balanceOf(alice), seller + 97.5e18, &quot;seller net same transaction&quot;);
+        assertEq(token.balanceOf(bob), buyer - 100e18, &quot;buyer gross&quot;);
+        assertEq(vault.totalAssets(), backing + 2.5e18, &quot;fee reaches actual vault&quot;);
+        assertEq(vault.totalSupply(), supply, &quot;fee mints no shares&quot;);
+        assertTrue(vault.convertToAssets(1e18) &gt; 1e18, &quot;all lenders benefit&quot;);
+        assertEq(nft.ownerOf(1), bob, &quot;buyer custody&quot;);
+        assertEq(token.balanceOf(address(market)), 0, &quot;no SQK stranded&quot;);
+        assertEq(token.allowance(address(market), address(vault)), 0, &quot;fee allowance revoked&quot;);
+        (address sellerAfter,,,,,) = market.listings(1);
+        assertEq(sellerAfter, address(0), &quot;listing consumed&quot;);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 1));
+        vm.prank(bob);
+        market.buy(1, type(uint256).max);
+    }
+
+    function test_CancelOnlyBySellerRestoresNFTAndCanRelist() public {
+        _list(1, 100e18);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotSeller.selector, 1));
+        vm.prank(bob);
+        market.cancel(1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotSeller.selector, 1));
+        market.cancel(1);
+        vm.prank(alice);
+        market.cancel(1);
+        assertEq(nft.ownerOf(1), alice, &quot;seller custody restored&quot;);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 1));
+        vm.prank(alice);
+        market.cancel(1);
+        _list(1, 200e18);
+        assertEq(market.currentPrice(1), 200e18, &quot;relisted price&quot;);
+    }
+
+    function test_FeeChangesCannotRewriteExistingSellerTerms() public {
+        _list(1, 100e18);
+        market.setFeeBps(500);
+        _list(2, 100e18);
+        uint256 backing = vault.totalAssets();
+        vm.prank(bob);
+        market.buy(1, type(uint256).max);
+        assertEq(vault.totalAssets(), backing + 2.5e18, &quot;old fee preserved&quot;);
+        vm.prank(bob);
+        market.buy(2, type(uint256).max);
+        assertEq(vault.totalAssets(), backing + 7.5e18, &quot;new listing fee applied&quot;);
+    }
+
+    function test_DutchAuctionStartMidpointLastSecondAndFloor() public {
+        vm.prank(alice);
+        market.startAuction(1, 200e18, 100e18);
+        uint256 start = block.timestamp;
+        assertEq(market.currentPrice(1), 200e18, &quot;premium at start&quot;);
+        vm.warp(start + 12 hours);
+        assertEq(market.currentPrice(1), 150e18, &quot;linear midpoint&quot;);
+        vm.warp(start + 1 days - 1);
+        assertTrue(market.currentPrice(1) &gt; 100e18, &quot;above floor before expiry&quot;);
+        vm.warp(start + 1 days);
+        assertEq(market.currentPrice(1), 100e18, &quot;floor at expiry&quot;);
+        vm.warp(start + 30 days);
+        assertEq(market.currentPrice(1), 100e18, &quot;floor persists&quot;);
+        vm.prank(bob);
+        market.buy(1, 100e18);
+        assertEq(nft.ownerOf(1), bob, &quot;expired auction remains buyable&quot;);
+    }
+
+    /// forge-config: default.fuzz.runs = 1000
+    function testFuzz_DutchPriceMonotoneAndSettlementConservesSQK(
+        uint128 premium,
+        uint128 floorRaw,
+        uint32 t,
+        uint16 feeRaw
+    ) public {
+        uint256 floor = bound(floorRaw, 1, 1e25);
+        uint256 start = floor + bound(premium, 1, 1e25);
+        uint256 fee = bound(feeRaw, 0, 500);
+        market.setFeeBps(fee);
+        vm.prank(alice);
+        market.startAuction(1, start, floor);
+        uint256 elapsed = bound(t, 0, 2 days);
+        vm.warp(block.timestamp + elapsed);
+        uint256 price = elapsed &gt;= 1 days ? floor : start - (start - floor) * elapsed / 1 days;
+        assertEq(market.currentPrice(1), price, &quot;linear auction quote&quot;);
+        assertGe(price, floor, &quot;floor&quot;);
+        assertLe(price, start, &quot;premium&quot;);
+        uint256 a = token.balanceOf(alice);
+        uint256 b = token.balanceOf(bob);
+        uint256 backing = vault.totalAssets();
+        vm.prank(bob);
+        market.buy(1, price);
+        uint256 charge = price * fee / 10000;
+        assertEq(token.balanceOf(alice) - a, price - charge, &quot;seller receives price less fee&quot;);
+        assertEq(b - token.balanceOf(bob), price, &quot;buyer pays quote&quot;);
+        assertEq(vault.totalAssets() - backing, charge, &quot;fee exact&quot;);
+        assertEq(token.balanceOf(address(market)), 0, &quot;no residue&quot;);
+    }
+
+    function test_DutchPricingHandlesMaximumUintWithoutOverflow() public {
+        vm.prank(alice);
+        market.startAuction(1, type(uint256).max, 1);
+        vm.warp(block.timestamp + 12 hours);
+        assertEq(market.currentPrice(1), type(uint256).max - (type(uint256).max - 1) / 2, &quot;full precision price&quot;);
+    }
+
+    function test_SlippageRejectsRelistedPriceWithoutMovingValue() public {
+        _list(1, 100e18);
+        vm.prank(alice);
+        market.cancel(1);
+        _list(1, 200e18);
+        uint256 b = token.balanceOf(bob);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.PriceExceedsLimit.selector, 200e18, 100e18));
+        vm.prank(bob);
+        market.buy(1, 100e18);
+        assertEq(token.balanceOf(bob), b, &quot;slippage charged buyer&quot;);
+        assertEq(nft.ownerOf(1), address(market), &quot;failed purchase moved NFT&quot;);
+    }
+
+    function test_ListingAuctionAndMissingListingErrors() public {
+        vm.expectRevert(BurrowMarket.InvalidPrice.selector);
+        vm.prank(alice);
+        market.list(1, 0);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotTokenOwner.selector, 1));
+        vm.prank(bob);
+        market.list(1, 1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.InvalidAuctionPrices.selector, 1, 0));
+        vm.prank(alice);
+        market.startAuction(1, 1, 0);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.InvalidAuctionPrices.selector, 1, 1));
+        vm.prank(alice);
+        market.startAuction(1, 1, 1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.InvalidAuctionPrices.selector, 1, 2));
+        vm.prank(alice);
+        market.startAuction(1, 1, 2);
+        _list(1, 1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.AlreadyListed.selector, 1));
+        vm.prank(alice);
+        market.list(1, 2);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.AlreadyListed.selector, 1));
+        vm.prank(alice);
+        market.startAuction(1, 2, 1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 2));
+        market.currentPrice(2);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 2));
+        market.buy(2, type(uint256).max);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.NotListed.selector, 2));
+        market.cancel(2);
+    }
+
+    function test_ApprovalAndPaymentFailuresPreserveListing() public {
+        vm.prank(alice);
+        nft.setApprovalForAll(address(market), false);
+        vm.expectRevert(BurrowTestNFT.Unauthorized.selector);
+        vm.prank(alice);
+        market.list(1, 100e18);
+        (address seller,,,,,) = market.listings(1);
+        assertEq(seller, address(0), &quot;failed escrow left listing&quot;);
+        vm.prank(alice);
+        nft.setApprovalForAll(address(market), true);
+        _list(1, 100e18);
+        vm.prank(bob);
+        token.approve(address(market), 0);
+        vm.expectRevert(
+            abi.encodeWithSignature(&quot;ERC20InsufficientAllowance(address,uint256,uint256)&quot;, address(market), 0, 100e18)
+        );
+        vm.prank(bob);
+        market.buy(1, type(uint256).max);
+        assertEq(nft.ownerOf(1), address(market), &quot;payment failure released NFT&quot;);
+        assertEq(market.currentPrice(1), 100e18, &quot;payment failure consumed listing&quot;);
+    }
+
+    function test_UnsolicitedNFTAndForgedCallbackRejected() public {
+        vm.expectRevert(BurrowMarket.UnexpectedNFT.selector);
+        vm.prank(alice);
+        nft.safeTransferFrom(alice, address(market), 1);
+        vm.expectRevert(BurrowMarket.UnexpectedNFT.selector);
+        market.onERC721Received(address(market), alice, 1, &quot;&quot;);
+        vm.expectRevert(BurrowMarket.UnexpectedNFT.selector);
+        vm.prank(address(nft));
+        market.onERC721Received(address(market), alice, 1, &quot;&quot;);
+    }
+
+    function test_TaxedSQKAndNonCollectingSinkRollbackEntireSale() public {
+        _list(1, 100e18);
+        token.setTax(true);
+        uint256 b = token.balanceOf(bob);
+        vm.expectRevert(BurrowMarket.UnexpectedSQKTransfer.selector);
+        vm.prank(bob);
+        market.buy(1, type(uint256).max);
+        assertEq(token.balanceOf(bob), b, &quot;taxed payment charged&quot;);
+        assertEq(market.currentPrice(1), 100e18, &quot;taxed payment consumed listing&quot;);
+        token.setTax(false);
+        BurrowTestFeeSink bad = new BurrowTestFeeSink(token);
+        bad.setIgnore(true);
+        BurrowMarket m = new BurrowMarket(address(token), address(nft), address(bad), address(this), 500, 1 days);
+        vm.startPrank(alice);
+        nft.setApprovalForAll(address(m), true);
+        m.list(2, 100e18);
+        vm.stopPrank();
+        vm.prank(bob);
+        token.approve(address(m), type(uint256).max);
+        vm.expectRevert(BurrowMarket.FeeNotCollected.selector);
+        vm.prank(bob);
+        m.buy(2, type(uint256).max);
+        assertEq(nft.ownerOf(2), address(m), &quot;noncollecting sink released NFT&quot;);
+        assertEq(token.balanceOf(bob), b, &quot;sink failure charged buyer&quot;);
+        bad.setIgnore(false);
+        bad.setFail(true);
+        vm.expectRevert(BurrowTestFeeSink.DonationRejected.selector);
+        vm.prank(bob);
+        m.buy(2, type(uint256).max);
+        assertEq(m.currentPrice(2), 100e18, &quot;rejected donation consumed listing&quot;);
+    }
+
+    function test_NFTReceiverCannotReenterSaleAndRejectedReceiverRollsBack() public {
+        _list(1, 100e18);
+        BurrowMarketReentrantBuyer attacker = new BurrowMarketReentrantBuyer(market, token);
+        token.mint(address(attacker), 100e18);
+        attacker.buy(1);
+        assertTrue(!attacker.callbackSucceeded(), &quot;receiver reentered sale&quot;);
+        assertEq(
+            keccak256(attacker.callbackResult()),
+            keccak256(abi.encodeWithSignature(&quot;ReentrancyGuardReentrantCall()&quot;)),
+            &quot;guard error&quot;
+        );
+        assertEq(nft.ownerOf(1), address(attacker), &quot;legitimate outer sale completes&quot;);
+        _list(2, 100e18);
+        BurrowMarketRejectingBuyer rejector = new BurrowMarketRejectingBuyer();
+        token.mint(address(rejector), 100e18);
+        uint256 backing = vault.totalAssets();
+        vm.expectRevert();
+        rejector.buy(market, token, 2);
+        assertEq(token.balanceOf(address(rejector)), 100e18, &quot;rejected recipient charged&quot;);
+        assertEq(vault.totalAssets(), backing, &quot;reverted sale leaked fees&quot;);
+        assertEq(nft.ownerOf(2), address(market), &quot;NFT lost&quot;);
+    }
+
+    function test_ZeroFeeAndSubWeiFeeDoNotCallDonateZero() public {
+        market.setFeeBps(0);
+        _list(1, 100e18);
+        uint256 backing = vault.totalAssets();
+        vm.prank(bob);
+        market.buy(1, type(uint256).max);
+        assertEq(vault.totalAssets(), backing, &quot;zero fee&quot;);
+        market.setFeeBps(500);
+        _list(2, 1);
+        vm.prank(bob);
+        market.buy(2, type(uint256).max);
+        assertEq(vault.totalAssets(), backing, &quot;rounded zero fee&quot;);
+    }
+
+    function test_ConstructorValidationAndOwnerFeeCap() public {
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.InvalidContract.selector, alice));
+        new BurrowMarket(alice, address(nft), address(vault), address(this), 0, 1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.InvalidContract.selector, alice));
+        new BurrowMarket(address(token), alice, address(vault), address(this), 0, 1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.InvalidContract.selector, alice));
+        new BurrowMarket(address(token), address(nft), alice, address(this), 0, 1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.FeeTooHigh.selector, 501));
+        new BurrowMarket(address(token), address(nft), address(vault), address(this), 501, 1);
+        vm.expectRevert(BurrowMarket.InvalidAuctionDuration.selector);
+        new BurrowMarket(address(token), address(nft), address(vault), address(this), 0, 0);
+        vm.expectRevert(abi.encodeWithSelector(BurrowMarket.FeeTooHigh.selector, 501));
+        market.setFeeBps(501);
+        vm.expectRevert(abi.encodeWithSignature(&quot;OwnableUnauthorizedAccount(address)&quot;, bob));
+        vm.prank(bob);
+        market.setFeeBps(1);
+        market.setFeeBps(500);
+        assertEq(market.feeBps(), 500, &quot;inclusive cap&quot;);
+    }
+
+    function test_LiquidatorCanAuctionCollateralAndRouteSaleFee() public {
+        _open(alice, 10, 1);
+        _borrow(alice, 600e18);
+        // Liquidation opens at 75% of value: two governed 20% cuts take value from 1000 to 640.
+        valuer.proposePricePerPower(0.8e18);
+        vm.warp(block.timestamp + 2 days);
+        valuer.executePricePerPower();
+        valuer.proposePricePerPower(0.64e18);
+        vm.warp(block.timestamp + 2 days);
+        valuer.executePricePerPower();
+        vm.warp(block.timestamp + 1 hours);
+        vm.prank(liquidator);
+        vault.liquidate(alice);
+        vm.startPrank(liquidator);
+        nft.setApprovalForAll(address(market), true);
+        market.startAuction(10, 1000e18, 800e18);
+        vm.stopPrank();
+        vm.warp(block.timestamp + 12 hours);
+        uint256 assets = vault.totalAssets();
+        vm.prank(bob);
+        market.buy(10, 900e18);
+        assertEq(nft.ownerOf(10), bob, &quot;liquidated NFT sold&quot;);
+        assertEq(vault.totalAssets(), assets + 22.5e18, &quot;liquidation auction fee&quot;);
+    }
+}
+
+contract BurrowMarketHandler is BurrowTestBase {
+    BurrowMarket public immutable market;
+    BurrowTestNFT public immutable nft;
+    BurrowTestToken public immutable token;
+    BurrowVaultLite public immutable vault;
+    address[3] public actors;
+    address[9] public modelOwner;
+    address[9] public seller;
+    uint256[9] public startPrice;
+    uint256[9] public floorPrice;
+    uint256[9] public listedAt;
+    uint256[9] public listingFee;
+    uint256 public expectedFees;
+    bool public badSettlement;
+
+    constructor(BurrowMarket m, BurrowTestNFT n, BurrowTestToken t, BurrowVaultLite v) {
+        market = m;
+        nft = n;
+        token = t;
+        vault = v;
+        for (uint256 i; i &lt; 3; i++) {
+            address who = address(uint160(uint256(keccak256(abi.encode(&quot;market actor&quot;, i)))));
+            actors[i] = who;
+            t.mint(who, 1e27);
+            vm.startPrank(who);
+            n.setApprovalForAll(address(m), true);
+            t.approve(address(m), type(uint256).max);
+            vm.stopPrank();
+        }
+        for (uint256 id = 1; id &lt;= 8; id++) {
+            address who = actors[id % 3];
+            n.mint(who, id, 1);
+            modelOwner[id] = who;
+        }
+    }
+
+    function acceptOwnership() external {
+        market.acceptOwnership();
+    }
+
+    function list(uint256 rawId, uint256 rawPrice, bool auction) external {
+        uint256 id = bound(rawId, 1, 8);
+        if (seller[id] != address(0)) return;
+        uint256 price = bound(rawPrice, 2, 1e22);
+        address who = modelOwner[id];
+        seller[id] = who;
+        startPrice[id] = price;
+        floorPrice[id] = auction ? price / 2 : price;
+        listedAt[id] = block.timestamp;
+        listingFee[id] = market.feeBps();
+        vm.prank(who);
+        if (auction) market.startAuction(id, price, price / 2);
+        else market.list(id, price);
+    }
+
+    function cancel(uint256 rawId) external {
+        uint256 id = bound(rawId, 1, 8);
+        address who = seller[id];
+        if (who == address(0)) return;
+        seller[id] = address(0);
+        vm.prank(who);
+        market.cancel(id);
+    }
+
+    function buy(uint256 rawId, uint256 buyerIndex) external {
+        uint256 id = bound(rawId, 1, 8);
+        address who = seller[id];
+        if (who == address(0)) return;
+        address buyer = actors[buyerIndex % 3];
+        if (buyer == who) buyer = actors[(buyerIndex % 3 + 1) % 3];
+        uint256 elapsed = block.timestamp - listedAt[id];
+        uint256 price =
+            elapsed &gt;= 1 days ? floorPrice[id] : startPrice[id] - (startPrice[id] - floorPrice[id]) * elapsed / 1 days;
+        uint256 fee = price * listingFee[id] / 10000;
+        uint256 oldSeller = token.balanceOf(who);
+        uint256 oldBuyer = token.balanceOf(buyer);
+        uint256 oldVault = vault.totalAssets();
+        seller[id] = address(0);
+        modelOwner[id] = buyer;
+        expectedFees += fee;
+        vm.prank(buyer);
+        market.buy(id, price);
+        if (
+            token.balanceOf(who) != oldSeller + price - fee || token.balanceOf(buyer) != oldBuyer - price
+                || vault.totalAssets() != oldVault + fee
+        ) badSettlement = true;
+    }
+
+    function advance(uint32 raw) external {
+        vm.warp(block.timestamp + bound(raw, 1, 2 days));
+    }
+
+    function setFee(uint16 raw) external {
+        market.setFeeBps(bound(raw, 0, 500));
+    }
+}
+
+contract BurrowMarketInvariantTest is BurrowVaultFixture {
+    BurrowMarket internal market;
+    BurrowMarketHandler internal handler;
+
+    function setUp() public {
+        _setup(0);
+        _seed(1e24);
+        market = new BurrowMarket(address(token), address(nft), address(vault), address(this), 250, 1 days);
+        handler = new BurrowMarketHandler(market, nft, token, vault);
+        market.transferOwnership(address(handler));
+        handler.acceptOwnership();
+    }
+
+    function targetContracts() public view returns (address[] memory a) {
+        a = new address[](1);
+        a[0] = address(handler);
+    }
+
+    struct FuzzSelector {
+        address addr;
+        bytes4[] selectors;
+    }
+
+    function targetSelectors() public view returns (FuzzSelector[] memory s) {
+        s = new FuzzSelector[](1);
+        bytes4[] memory a = new bytes4[](5);
+        a[0] = handler.list.selector;
+        a[1] = handler.cancel.selector;
+        a[2] = handler.buy.selector;
+        a[3] = handler.advance.selector;
+        a[4] = handler.setFee.selector;
+        s[0] = FuzzSelector(address(handler), a);
+    }
+
+    /// forge-config: default.invariant.runs = 256
+    /// forge-config: default.invariant.depth = 64
+    /// forge-config: default.invariant.fail-on-revert = true
+    function invariant_EscrowOwnershipAndSaleAccounting() public view {
+        assertTrue(!handler.badSettlement(), &quot;sale did not conserve price and fee&quot;);
+        assertEq(token.balanceOf(address(market)), 0, &quot;market retained SQK&quot;);
+        assertEq(token.allowance(address(market), address(vault)), 0, &quot;residual allowance&quot;);
+        assertEq(vault.totalAssets(), 1e24 + handler.expectedFees(), &quot;fee income reconciliation&quot;);
+        uint256 held;
+        for (uint256 i; i &lt; 3; i++) {
+            held += token.balanceOf(handler.actors(i));
+        }
+        assertEq(held + handler.expectedFees(), 3e27, &quot;all SQK conserved between buyers sellers and vault&quot;);
+        for (uint256 id = 1; id &lt;= 8; id++) {
+            address expectedSeller = handler.seller(id);
+            (address actualSeller,,,,,) = market.listings(id);
+            assertEq(actualSeller, expectedSeller, &quot;listing model&quot;);
+            assertEq(
+                nft.ownerOf(id),
+                expectedSeller == address(0) ? handler.modelOwner(id) : address(market),
+                &quot;NFT escrow model&quot;
+            );
+        }
+    }
+}
+
+contract BurrowMarketSepoliaForkTest is BurrowSepoliaForkFixture {
+    function testFork_SepoliaRealNFTSalePaysRealSQKToVault() public {
+        _fork();
+        (BurrowVaultLite v,) = _liveVault();
+        BurrowMarket m = new BurrowMarket(SQK, NFT, address(v), address(this), 250, 1 days);
+        address holder = IERC721(NFT).ownerOf(2);
+        address buyer = addr(&quot;fork market buyer&quot;);
+        address lender = addr(&quot;fork market lender&quot;);
+        deal(SQK, lender, 10000e18);
+        vm.startPrank(lender);
+        IERC20(SQK).approve(address(v), type(uint256).max);
+        v.deposit(10000e18, 0);
+        vm.stopPrank();
+        vm.startPrank(holder);
+        IERC721(NFT).approve(address(m), 2);
+        m.list(2, 100e18);
+        vm.stopPrank();
+        deal(SQK, buyer, 100e18);
+        uint256 sellerBalance = IERC20(SQK).balanceOf(holder);
+        vm.startPrank(buyer);
+        IERC20(SQK).approve(address(m), 100e18);
+        m.buy(2, 100e18);
+        vm.stopPrank();
+        assertEq(IERC721(NFT).ownerOf(2), buyer, &quot;real NFT delivered&quot;);
+        assertEq(IERC20(SQK).balanceOf(holder), sellerBalance + 97.5e18, &quot;real seller paid&quot;);
+        assertEq(v.totalAssets(), 10002.5e18, &quot;real SQK fee reached vault&quot;);
+        assertTrue(v.convertToAssets(1e18) &gt; 1e18, &quot;live fee raised share price&quot;);
+    }
+}
+</code></pre></section></main></body></html>

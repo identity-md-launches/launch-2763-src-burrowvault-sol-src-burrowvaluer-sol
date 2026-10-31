@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Burrow</title>
+<meta name="description" content="Borrow SQK against Squeek NFTs on Sepolia. The collateral keeps mining on Squeekchain and its rewards pay the loan down.">
+<link rel="preconnect" href="https://api.squeekchain.com" crossorigin>
+<link rel="preconnect" href="https://ethereum-sepolia-rpc.publicnode.com" crossorigin>
+<link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+<meta property="og:title" content="Burrow — Borrow SQK against Squeek NFTs">
+<meta property="og:description" content="Collateral keeps mining on Squeekchain. Its rewards pay the loan down. Sepolia testnet only.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="./assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Burrow: borrow SQK against Squeek NFTs, beside the Squeekchain hamster wheel.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="./assets/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./assets/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<link rel="modulepreload" href="app.js"><link rel="modulepreload" href="config.js">
+</head>
+<body>
+<a class="skip" href="#position">Skip to position</a>
+<header class="top"><div class="topin">
+  <span class="brand">
+    <svg class="wheel" id="wheel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/>
+      <path d="M12 2v8M12 14v8M2 12h8M14 12h8M4.9 4.9l5.7 5.7M13.4 13.4l5.7 5.7M19.1 4.9l-5.7 5.7M10.6 13.4l-5.7 5.7"/>
+    </svg>
+    Burrow
+  </span>
+  <span class="chip" id="net">Sepolia</span>
+  <div class="kpis" tabindex="0" role="region" aria-label="Live Squeekchain metrics; scroll for more">
+    <div class="kpi"><span>Wheel</span><b id="kWheel">—</b></div>
+    <div class="kpi"><span>Squeek block</span><b id="kBlock">—</b></div>
+    <div class="kpi"><span>Round</span><b id="kRoundNo">—</b></div>
+    <div class="kpi"><span>Next round</span><b id="kRound">—</b></div>
+    <div class="kpi"><span>SQK minted, 24 h</span><b id="kMint">—</b></div>
+    <div class="kpi"><span>Reward per power</span><b id="kRpp">—</b></div>
+    <div class="kpi"><span>NFT power staked</span><b id="kPow">—</b></div>
+  </div>
+  <span class="sp"></span>
+  <div class="right"><span class="chip" id="tick">syncing</span><button class="btn" id="connect">Connect wallet</button></div>
+</div></header>
+
+<main class="wrap">
+
+  <section class="hero enter" aria-labelledby="h1">
+    <div class="hero-copy">
+      <h1 id="h1">Borrow SQK against your Squeek NFTs</h1>
+      <p>The NFT stays staked on Squeekchain with the vault as claim recipient, so the hamster's mining rewards pay the loan down by themselves.</p>
+      <div class="hero-act">
+        <a class="btn pri" href="#position">Open a position</a>
+        <a class="btn" href="#lend-panel">Lend SQK</a>
+      </div>
+      <dl class="facts">
+        <div><dt>Loan to value</dt><dd>60%</dd></div>
+        <div><dt>Borrow APR</dt><dd>8%</dd></div>
+        <div><dt>Liquidation</dt><dd>75% of value</dd></div>
+        <div><dt>Price per power</dt><dd>1 SQK</dd></div>
+      </dl>
+    </div>
+    <figure class="stage" id="stage">
+      <canvas id="wheel3d" role="img" aria-label="A hamster wheel, at rest"></canvas>
+      <figcaption id="wheelCap"><i></i><span>Reading the wheel</span></figcaption>
+    </figure>
+  </section>
+
+  <div class="cols">
+    <div class="col">
+
+      <section class="panel enter" id="position" tabindex="-1">
+        <div class="ph"><h2>Position</h2><span class="hint" id="posFor">no account</span><span class="sp"></span><span class="flag" id="modeFlag">read-only</span></div>
+        <div class="empty" id="posEmpty">
+          <h3>No account loaded</h3>
+          <p>Connect a wallet to see its collateral, credit line and debt. To look at another account, paste its address under Collateral.</p>
+          <ol class="steps">
+            <li><span>1</span>Escrow Squeek NFTs</li>
+            <li><span>2</span>Borrow up to 60% of their value</li>
+            <li><span>3</span>Mining rewards repay the debt</li>
+          </ol>
+          <button class="btn pri js-connect">Connect wallet</button>
+        </div>
+        <div class="pos-grid">
+          <div class="gauge">
+            <svg viewBox="0 0 168 104" id="gauge" aria-label="debt against credit line and liquidation threshold"></svg>
+            <div class="lbl" id="gaugeLbl">no debt</div>
+          </div>
+          <div class="figs">
+            <div><span>Collateral power</span><b id="pPower">0</b><small id="pPowerN">0 NFTs escrowed</small></div>
+            <div><span>Credit line</span><b id="pLine">0.00</b><small>SQK at 60% LTV</small></div>
+            <div><span>Debt</span><b id="pDebt">0.00</b><small id="pDebtN">SQK</small></div>
+            <div><span>Liquidation above</span><b id="pThr">0.00</b><small>SQK, 75% of value</small></div>
+            <div><span>Health</span><b id="pHf">∞</b><small>threshold ÷ debt</small></div>
+            <div><span>Mining credit pending</span><b id="pPend">0.00</b><small>SQK claimable by the vault</small></div>
+          </div>
+        </div>
+        <div class="form">
+          <input id="amount" type="text" inputmode="decimal" placeholder="SQK amount" aria-label="SQK amount">
+          <button class="btn" id="open" disabled>Escrow selected</button>
+          <button class="btn pri" id="borrow" disabled>Borrow</button>
+          <button class="btn" id="repay" disabled>Repay</button>
+        </div>
+        <div class="form two flush">
+          <span class="hint" id="posHint"></span>
+          <button class="btn sm" id="sweep" disabled>Sweep rewards</button>
+          <button class="btn sm" id="close" disabled>Close position</button>
+        </div>
+        <div class="status" id="status" role="status" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
+      <section class="panel enter" id="collateral">
+        <div class="ph"><h2>Collateral</h2><span class="hint" role="status" id="invHint">no account</span><span class="sp"></span>
+          <div class="look"><input id="addr" type="text" spellcheck="false" autocomplete="off" aria-describedby="accountStatus" placeholder="0x… account" aria-label="Account address">
+          <button class="btn sm" id="look">Load</button></div></div>
+        <p class="status account-status" id="accountStatus" role="status" aria-live="polite"></p>
+        <p class="note" id="invEmpty">Your Squeek NFTs appear here once a wallet is connected, or load any address.</p>
+        <div class="pb"><div class="inv" id="inv"></div></div>
+        <div class="tw" tabindex="0" role="region" aria-label="Scrollable data table"><table><thead><tr><th>Token</th><th class="n">Level</th><th class="n">Power</th><th class="n">Line at 60%</th><th>Custody</th></tr></thead>
+        <tbody id="invRows"></tbody></table></div>
+      </section>
+
+      <section class="panel enter" id="positions">
+        <div class="ph"><h2>Open positions</h2><span class="hint">every borrower, from the vault's own events</span></div>
+        <div class="tw" tabindex="0" role="region" aria-label="Scrollable data table"><table><thead><tr><th>Borrower</th><th class="n">NFTs</th><th class="n">Debt</th><th class="n">Liquidation above</th><th class="n">Health</th><th></th></tr></thead>
+        <tbody id="liq"><tr><td colspan="6" class="muted">Reading events</td></tr></tbody></table></div>
+      </section>
+
+    </div>
+
+    <div class="col">
+
+      <section class="panel enter" id="chain-panel">
+        <div class="ph"><h2>Squeekchain</h2><span class="hint">more from the live feed</span></div>
+        <div class="tw" tabindex="0" role="region" aria-label="Scrollable data table"><table><tbody id="chain"><tr><td class="muted">Reading Squeekchain…</td></tr></tbody></table></div>
+      </section>
+
+      <section class="panel enter" id="lend-panel">
+        <div class="ph"><h2 id="lend-h">Lend</h2><span class="hint">bSQK</span><span class="sp"></span><span class="flag" id="lendFlag">read-only</span></div>
+        <dl class="kv pb" id="lend"><dt>Vault</dt><dd>Reading Sepolia…</dd></dl>
+        <div class="empty slim" id="lendEmpty">
+          <p>Deposit SQK, receive bSQK. Loan interest, marketplace fees and the swap hook fee all raise the bSQK share price.</p>
+          <button class="btn pri js-connect">Connect wallet</button>
+        </div>
+        <div class="form two ruled" id="lendForm">
+          <input id="lendAmt" type="text" inputmode="decimal" placeholder="SQK amount" aria-label="SQK amount to lend">
+          <button class="btn pri" id="deposit" disabled>Deposit</button>
+          <button class="btn" id="withdraw" disabled>Withdraw</button>
+        </div>
+        <div class="status" id="lendStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
+      <section class="panel enter">
+        <div class="ph"><h2>Risk parameters</h2><span class="sp"></span><span class="flag">48 h timelock</span></div>
+        <dl class="kv pb" id="params"><dt>Parameters</dt><dd>Reading Sepolia…</dd></dl>
+      </section>
+
+      <section class="panel enter">
+        <div class="ph"><h2>Revenue to bSQK</h2><span class="hint">every fee raises the share price</span></div>
+        <div class="tw" tabindex="0" role="region" aria-label="Scrollable data table"><table><thead><tr><th>Source</th><th class="n">Rate</th><th class="n">Cap</th><th class="n">Last 24 h</th></tr></thead>
+        <tbody id="rev"><tr><td colspan="4" class="muted">Reading events…</td></tr></tbody></table></div>
+      </section>
+
+      <section class="panel enter">
+        <div class="ph"><h2>Contracts</h2><span class="hint">Sepolia · <a href="./source/index.html">read the deployed source</a></span></div>
+        <div class="tw" tabindex="0" role="region" aria-label="Scrollable data table"><table><tbody id="addrs"></tbody></table></div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <p>Burrow lends SQK against Squeek NFTs. Collateral is escrowed, re-staked on Squeekchain with the vault as claim recipient, so mining rewards pay the debt down; rewards above the debt go back to the borrower. There is no NFT price feed on this chain, so valuation is power-based: the price per power unit is a governed parameter behind a 48-hour timelock, capped at 20% per change, and liquidation is frozen for an hour after any change.</p>
+  <p>Deployed source, tests and README: <a href="./source/index.html">burrow-squeek.vercel.app/source</a>; every contract is a Sourcify exact match. Unaudited. Sepolia testnet only, SQK has no value. The page reads the Squeekchain API and Sepolia over <code>eth_call</code>; Squeek art comes from the collection's own on-chain renderer.</p>
+</footer>
+<dialog id="walletDialog" aria-labelledby="walletTitle">
+  <div class="sheet-head"><h2 id="walletTitle">Connect a wallet</h2><button class="btn sm" id="walletClose" aria-label="Close wallet chooser">×</button></div>
+  <div id="walletRows"></div>
+  <p id="walletStatus" class="hint" role="status" aria-live="polite"></p>
+</dialog>
+<noscript><p class="foot">Enable JavaScript to read live Squeekchain data and connect a wallet. Contract sources are available from the footer.</p></noscript>
+<script type="module" src="wheel.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

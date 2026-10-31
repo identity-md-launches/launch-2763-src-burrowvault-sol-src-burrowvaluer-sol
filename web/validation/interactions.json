@@ -1,0 +1,85 @@
+{
+  "results": [
+    {
+      "name": "Export has complete local assets and no absolute internal URLs",
+      "passed": true
+    },
+    {
+      "name": "First screen, relative subpath, and reflow at 320/390/768/1120/1440 in both themes",
+      "passed": true
+    },
+    {
+      "name": "Main navigation and read-only account lookup by Enter",
+      "passed": true
+    },
+    {
+      "name": "Invalid address has an announced inline error and sends no account request",
+      "passed": true
+    },
+    {
+      "name": "No-wallet chooser: keyboard trap, Escape, focus return, local Coinbase SDK",
+      "passed": true
+    },
+    {
+      "name": "Phone chooser offers all four wallet deep links and Coinbase Smart Wallet",
+      "passed": true
+    },
+    {
+      "name": "EIP-6963 discovery, connect, full address and disconnect",
+      "passed": true
+    },
+    {
+      "name": "Wallet rejection stays recoverable and announces the reason",
+      "passed": true
+    },
+    {
+      "name": "Wrong-network actions disabled; switch to Sepolia recovers",
+      "passed": true
+    },
+    {
+      "name": "Decimal validation rejects negative, zero, exponent and >18 decimal amounts",
+      "passed": true
+    },
+    {
+      "name": "Deposit approval, pending lock and confirmed calldata use the live vault",
+      "passed": true
+    },
+    {
+      "name": "Wallet rejection and on-chain revert are distinct recoverable states",
+      "passed": true
+    },
+    {
+      "name": "NFT keyboard selection and escrow call encode the selected token IDs",
+      "passed": true
+    },
+    {
+      "name": "Self-staked NFTs are shown only after checking the actual depositor",
+      "passed": true
+    },
+    {
+      "name": "Borrow, repay-all and close follow the position state",
+      "passed": true
+    },
+    {
+      "name": "Withdraw never silently clamps an amount above the balance",
+      "passed": true
+    },
+    {
+      "name": "Failed event history is never reported as no open positions",
+      "passed": true
+    },
+    {
+      "name": "Offline chain/feed errors do not fabricate balances and keep Connect usable",
+      "passed": true
+    },
+    {
+      "name": "A feed failure after success stays offline instead of reverting to synced",
+      "passed": true
+    },
+    {
+      "name": "All deployed source links work without extensionless route rewrites",
+      "passed": true
+    }
+  ],
+  "webkit": "Not run: WebKit launch failed because required host libraries are unavailable. browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Missing libraries:                                   ║\n║     libgtk-4.so.1                                    ║\n║     libpangocairo-1.0.so.0                           ║\n║     libgdk_pixbuf-2.0.so.0                "
+}
