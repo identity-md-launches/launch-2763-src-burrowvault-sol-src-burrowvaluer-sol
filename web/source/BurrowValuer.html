@@ -1,0 +1,412 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>src/BurrowValuer.sol · Burrow source</title><meta name="description" content="Burrow source, tests and deployment record"><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="../styles.css"><style>pre{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:16px;overflow:auto;font:12px/18px var(--mono);tab-size:4}.wrap{max-width:1100px}.source-address{overflow-wrap:anywhere;white-space:normal}.source-table{overflow:auto}.source-table a{display:inline-block;min-height:24px}.source-list a{border:0}.source-header{flex-wrap:wrap;height:auto;min-height:64px;gap:8px;padding-block:12px}.source-header .chip{white-space:normal}</style></head><body><header class="top"><div class="topin source-header"><a class="brand" href="../index.html" style="border:0">Burrow</a><span class="chip">source, exactly what is deployed</span><span class="sp"></span><a class="chip" href="./index.html">all files</a></div></header><main class="wrap"><section class="panel"><div class="ph"><h1 style="font-size:16px">src/BurrowValuer.sol</h1></div><pre tabindex="0" aria-label="src/BurrowValuer.sol source"><code>// SPDX-License-Identifier: MIT
+pragma solidity 0.8.26;
+
+/*
+ * OpenZeppelin Contracts v5.0.2: Context, Ownable and Ownable2Step are
+ * included below to make this single-file submission build offline.
+ * Only contract identifiers are prefixed with BurrowValuer; imports and
+ * duplicate pragma/license headers are removed. The implementation is unchanged.
+ * Source: https://github.com/OpenZeppelin/openzeppelin-contracts/tree/v5.0.2/contracts
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2016-2023 zOS Global Limited and contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * &quot;Software&quot;), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+// OpenZeppelin Contracts (last updated v5.0.1) (utils/BurrowValuerContext.sol)
+
+/**
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+abstract contract BurrowValuerContext {
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes calldata) {
+        return msg.data;
+    }
+
+    function _contextSuffixLength() internal view virtual returns (uint256) {
+        return 0;
+    }
+}
+
+// OpenZeppelin Contracts (last updated v5.0.0) (access/BurrowValuerOwnable.sol)
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * The initial owner is set to the address provided by the deployer. This can
+ * later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
+abstract contract BurrowValuerOwnable is BurrowValuerContext {
+    address private _owner;
+
+    /**
+     * @dev The caller account is not authorized to perform an operation.
+     */
+    error OwnableUnauthorizedAccount(address account);
+
+    /**
+     * @dev The owner is not a valid owner account. (eg. `address(0)`)
+     */
+    error OwnableInvalidOwner(address owner);
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the address provided by the deployer as the initial owner.
+     */
+    constructor(address initialOwner) {
+        if (initialOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _transferOwnership(initialOwner);
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if the sender is not the owner.
+     */
+    function _checkOwner() internal view virtual {
+        if (owner() != _msgSender()) {
+            revert OwnableUnauthorizedAccount(_msgSender());
+        }
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby disabling any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        if (newOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
+
+// OpenZeppelin Contracts (last updated v5.0.0) (access/BurrowValuerOwnable2Step.sol)
+
+/**
+ * @dev Contract module which provides access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * The initial owner is specified at deployment time in the constructor for `BurrowValuerOwnable`. This
+ * can later be changed with {transferOwnership} and {acceptOwnership}.
+ *
+ * This module is used through inheritance. It will make available all functions
+ * from parent (BurrowValuerOwnable).
+ */
+abstract contract BurrowValuerOwnable2Step is BurrowValuerOwnable {
+    address private _pendingOwner;
+
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Returns the address of the pending owner.
+     */
+    function pendingOwner() public view virtual returns (address) {
+        return _pendingOwner;
+    }
+
+    /**
+     * @dev Starts the ownership transfer of the contract to a new account. Replaces the pending transfer if there is one.
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual override onlyOwner {
+        _pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner(), newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`) and deletes any pending owner.
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual override {
+        delete _pendingOwner;
+        super._transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev The new owner accepts the ownership transfer.
+     */
+    function acceptOwnership() public virtual {
+        address sender = _msgSender();
+        if (pendingOwner() != sender) {
+            revert OwnableUnauthorizedAccount(sender);
+        }
+        _transferOwnership(sender);
+    }
+}
+
+/// @dev The Squeek NFT&#39;s level is one-based; it is not a staking position.
+interface IBurrowValuerSqueekNFT {
+    function ownerOf(uint256 tokenId) external view returns (address);
+    function level(uint256 tokenId) external view returns (uint8);
+}
+/// @dev Squeekchain staking publishes the mining power of each level. Reading it live keeps
+///      valuation equal to what the chain actually pays for the NFT; no table to drift.
+interface IBurrowValuerStaking {
+    function basePower(address collection, uint8 level) external view returns (uint256);
+}
+
+/// @title BurrowValuer
+/// @notice Values up to 32 distinct Squeek NFTs in SQK base units.
+/// @dev Unaudited, testnet only. Power is Squeekchain staking&#39;s basePower for the
+///      NFT&#39;s level (1000, 2200, 4840, ... on Sepolia), and pricePerPower is SQK base
+///      units (18 decimals) per one power. Consequently
+///      creditLine = floor(sum(power) * pricePerPower * ltvBps / 10_000).
+///      The collection, staking source, LTV and price band cannot be changed.
+///      The owner may only govern price within the band and rate limit, through
+///      a two-day delay. This contract never holds or moves collateral.
+contract BurrowValuer is BurrowValuerOwnable2Step {
+    uint256 public constant BPS = 10_000;
+    uint256 public constant MAX_LTV_BPS = 6_000;
+    uint256 public constant MAX_PRICE_CHANGE_BPS = 2_000;
+    uint256 public constant PRICE_TIMELOCK = 2 days;
+    uint256 public constant MAX_TOKEN_IDS = 32;
+    /// @dev Power per NFT is bounded so 32 NFTs at maxPricePerPower never overflow.
+    uint256 public constant MAX_POWER = 1e24;
+
+    IBurrowValuerSqueekNFT public immutable squeekNFT;
+    IBurrowValuerStaking public immutable staking;
+    uint256 public immutable minPricePerPower;
+    uint256 public immutable maxPricePerPower;
+    uint256 public immutable ltvBps;
+
+    uint256 public pricePerPower;
+    uint256 public pendingPricePerPower;
+    uint256 public priceChangeReadyAt;
+
+    /// @notice Timestamp of the last EXECUTED price change; zero before any change.
+    /// @dev The vault must reject liquidation until lastPriceChange + 1 hours
+    ///      after an execution. A proposal or cancellation does not change this.
+    uint256 public lastPriceChange;
+
+    error InvalidCollection(address collection);
+    error InvalidLtvBps(uint256 supplied);
+    error InvalidPriceBand(uint256 minimum, uint256 maximum);
+    error InvalidStaking(address staking);
+    error PowerTooLarge(uint256 level, uint256 power);
+    error TooManyTokenIds(uint256 supplied);
+    error TokenIdsNotStrictlyAscending(uint256 previous, uint256 current);
+    error InvalidToken(uint256 tokenId);
+    error LevelReadFailed(uint256 tokenId);
+    error UnsupportedLevel(uint256 level);
+    error PriceOutsideBand(uint256 supplied);
+    error PriceUnchanged();
+    error PriceChangeTooLarge(uint256 oldPrice, uint256 newPrice);
+    error NoPendingPriceChange();
+    error PriceChangeNotReady(uint256 readyAt);
+
+    event PriceProposed(uint256 oldPrice, uint256 newPrice, uint256 readyAt);
+    event PriceExecuted(uint256 oldPrice, uint256 newPrice);
+    event PriceProposalCancelled(uint256 proposedPrice);
+
+    /// @param initialOwner Explicit governance address; ownership transfers take two steps.
+    /// @param collection The live Squeek ERC721, supplied by the deployer.
+    /// @param staking_ Squeekchain staking, read for basePower(collection, level).
+    /// @param initialPrice Initial SQK base units per power, within the immutable band.
+    /// @param minimumPrice Nonzero inclusive floor for pricePerPower.
+    /// @param maximumPrice Inclusive ceiling; bounded so 32 NFTs of MAX_POWER fit uint256.
+    /// @param initialLtvBps Fixed loan-to-value ratio, at most 6000 basis points.
+    constructor(
+        address initialOwner,
+        address collection,
+        address staking_,
+        uint256 initialPrice,
+        uint256 minimumPrice,
+        uint256 maximumPrice,
+        uint256 initialLtvBps
+    ) BurrowValuerOwnable(initialOwner) {
+        if (collection.code.length == 0) revert InvalidCollection(collection);
+        if (staking_.code.length == 0) revert InvalidStaking(staking_);
+        if (initialLtvBps == 0 || initialLtvBps &gt; MAX_LTV_BPS) revert InvalidLtvBps(initialLtvBps);
+        if (minimumPrice == 0 || minimumPrice &gt; maximumPrice) {
+            revert InvalidPriceBand(minimumPrice, maximumPrice);
+        }
+        if (initialPrice &lt; minimumPrice || initialPrice &gt; maximumPrice) {
+            revert PriceOutsideBand(initialPrice);
+        }
+        if (maximumPrice &gt; type(uint256).max / (MAX_POWER * MAX_TOKEN_IDS)) {
+            revert InvalidPriceBand(minimumPrice, maximumPrice);
+        }
+        // Level one must be priced by the staking contract, or nothing can ever be valued.
+        if (IBurrowValuerStaking(staking_).basePower(collection, 1) == 0) revert InvalidStaking(staking_);
+
+        squeekNFT = IBurrowValuerSqueekNFT(collection);
+        staking = IBurrowValuerStaking(staking_);
+        minPricePerPower = minimumPrice;
+        maxPricePerPower = maximumPrice;
+        pricePerPower = initialPrice;
+        ltvBps = initialLtvBps;
+    }
+
+    /// @notice Maximum debt, rounded down once after summing collateral power.
+    /// @dev Empty collateral has a zero line. IDs must be strictly ascending.
+    function creditLine(uint256[] calldata tokenIds) external view returns (uint256) {
+        uint256 value = collateralValue(tokenIds);
+        // Quotient/remainder decomposition is exactly floor(value * LTV / BPS)
+        // without overflowing the intermediate product for large valid bands.
+        return (value / BPS) * ltvBps + (value % BPS) * ltvBps / BPS;
+    }
+
+    /// @notice Undiscounted SQK value, before LTV, also usable for NFT bonds.
+    function collateralValue(uint256[] calldata tokenIds) public view returns (uint256) {
+        return totalPower(tokenIds) * pricePerPower;
+    }
+
+    /// @notice Sum of the immutable table powers for the NFTs&#39; current levels.
+    /// @dev The caller (vault) is responsible for escrow and ownership checks for
+    ///      its borrower; valuation remains valid while staking owns the NFTs.
+    function totalPower(uint256[] calldata tokenIds) public view returns (uint256 power) {
+        uint256 count = tokenIds.length;
+        if (count &gt; MAX_TOKEN_IDS) revert TooManyTokenIds(count);
+        for (uint256 i; i &lt; count; ++i) {
+            if (i != 0 &amp;&amp; tokenIds[i] &lt;= tokenIds[i - 1]) {
+                revert TokenIdsNotStrictlyAscending(tokenIds[i - 1], tokenIds[i]);
+            }
+            power += powerOf(tokenIds[i]);
+        }
+    }
+
+    /// @notice Power of one existing NFT, independent of its current custodian.
+    function powerOf(uint256 tokenId) public view returns (uint256) {
+        // Check existence independently: a mapping-backed level getter might
+        // retain a burned NFT&#39;s level. Never credit that stale collateral.
+        try squeekNFT.ownerOf(tokenId) returns (address tokenOwner) {
+            if (tokenOwner == address(0)) revert InvalidToken(tokenId);
+        } catch {
+            revert InvalidToken(tokenId);
+        }
+        try squeekNFT.level(tokenId) returns (uint8 nftLevel) {
+            return powerForLevel(nftLevel);
+        } catch {
+            revert LevelReadFailed(tokenId);
+        }
+    }
+
+    /// @notice Squeekchain&#39;s own mining power for a one-based NFT level. Fails closed
+    ///         on levels the chain does not price (returns zero) or prices absurdly.
+    function powerForLevel(uint256 nftLevel) public view returns (uint256 power) {
+        if (nftLevel == 0 || nftLevel &gt; type(uint8).max) revert UnsupportedLevel(nftLevel);
+        power = staking.basePower(address(squeekNFT), uint8(nftLevel));
+        if (power == 0) revert UnsupportedLevel(nftLevel);
+        if (power &gt; MAX_POWER) revert PowerTooLarge(nftLevel, power);
+    }
+
+    /// @notice Propose a price. Replacing a pending proposal restarts the full delay.
+    function proposePricePerPower(uint256 newPrice) external onlyOwner {
+        _validatePriceChange(newPrice);
+        pendingPricePerPower = newPrice;
+        priceChangeReadyAt = block.timestamp + PRICE_TIMELOCK;
+        emit PriceProposed(pricePerPower, newPrice, priceChangeReadyAt);
+    }
+
+    /// @notice Apply the sole pending proposal after two days, consuming it once.
+    function executePricePerPower() external onlyOwner {
+        uint256 newPrice = pendingPricePerPower;
+        if (newPrice == 0) revert NoPendingPriceChange();
+        if (block.timestamp &lt; priceChangeReadyAt) revert PriceChangeNotReady(priceChangeReadyAt);
+        _validatePriceChange(newPrice);
+
+        uint256 oldPrice = pricePerPower;
+        delete pendingPricePerPower;
+        delete priceChangeReadyAt;
+        pricePerPower = newPrice;
+        lastPriceChange = block.timestamp;
+        emit PriceExecuted(oldPrice, newPrice);
+    }
+
+    /// @notice Discard a proposal without moving the price or liquidation timestamp.
+    function cancelPriceProposal() external onlyOwner {
+        uint256 proposed = pendingPricePerPower;
+        if (proposed == 0) revert NoPendingPriceChange();
+        delete pendingPricePerPower;
+        delete priceChangeReadyAt;
+        emit PriceProposalCancelled(proposed);
+    }
+
+    function _validatePriceChange(uint256 newPrice) private view {
+        if (newPrice &lt; minPricePerPower || newPrice &gt; maxPricePerPower) revert PriceOutsideBand(newPrice);
+        uint256 current = pricePerPower;
+        if (newPrice == current) revert PriceUnchanged();
+        uint256 difference = newPrice &gt; current ? newPrice - current : current - newPrice;
+        // 20% = 1/5. Rounding the allowed change DOWN rejects even one wei over
+        // the exact limit, in either direction, without current * BPS overflow.
+        if (difference &gt; current / (BPS / MAX_PRICE_CHANGE_BPS)) {
+            revert PriceChangeTooLarge(current, newPrice);
+        }
+    }
+}
+</code></pre></section></main></body></html>

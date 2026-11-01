@@ -1,0 +1,126 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>test/ForkLite.t.sol · Burrow source</title><meta name="description" content="Burrow source, tests and deployment record"><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="../styles.css"><style>pre{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:16px;overflow:auto;font:12px/18px var(--mono);tab-size:4}.wrap{max-width:1100px}.source-address{overflow-wrap:anywhere;white-space:normal}.source-table{overflow:auto}.source-table a{display:inline-block;min-height:24px}.source-list a{border:0}.source-header{flex-wrap:wrap;height:auto;min-height:64px;gap:8px;padding-block:12px}.source-header .chip{white-space:normal}</style></head><body><header class="top"><div class="topin source-header"><a class="brand" href="../index.html" style="border:0">Burrow</a><span class="chip">source, exactly what is deployed</span><span class="sp"></span><a class="chip" href="./index.html">all files</a></div></header><main class="wrap"><section class="panel"><div class="ph"><h1 style="font-size:16px">test/ForkLite.t.sol</h1></div><pre tabindex="0" aria-label="test/ForkLite.t.sol source"><code>// SPDX-License-Identifier: MIT
+pragma solidity 0.8.26;
+import {Test} from &quot;forge-std/Test.sol&quot;;
+import {BurrowVaultLite} from &quot;../src/BurrowVaultLite.sol&quot;;
+
+interface IValuerLive { function creditLine(uint256[] calldata) external view returns (uint256); function ltvBps() external view returns (uint256); }
+
+contract ForkLiteTest is Test {
+    address constant SQK = 0x5501E1Fa81Be1c3F49225fa7668DA0245d07Db60;
+    address constant NFT = 0xCB98349c134aB983dA5BfD80527dfe2552bDB70F;
+    address constant STAKING = 0x4b67b739dFd832f4EAC67a7Aa3bc244fB74cea4F;
+    address constant VALUER = 0x3DAe531514bA050Ec9a03BBC268528A84da2BcFA;   // đã deploy
+    uint256 constant RATE = uint256(0.08e18) / 365 days;
+
+    function _fork() internal {
+        string memory url = vm.envOr(&quot;SEPOLIA_RPC_URL&quot;, string(&quot;&quot;));
+        if (bytes(url).length == 0) { vm.skip(true); return; }
+        vm.createSelectFork(url);
+        assertEq(block.chainid, 11155111);
+    }
+
+    function testFork_DeploysAgainstRealSqueekchain() public {
+        _fork();
+        BurrowVaultLite v = new BurrowVaultLite(SQK, NFT, STAKING, VALUER, RATE);
+        assertEq(address(v.sqk()), SQK);
+        assertEq(address(v.valuer()), VALUER);
+        assertEq(v.totalSupply(), 0);
+        assertEq(v.borrowIndex(), 1e18);
+        uint256[] memory ids = new uint256[](1); ids[0] = 8936;
+        uint256 line = IValuerLive(VALUER).creditLine(ids);
+        assertGt(line, 0, &quot;valuer on chain answers&quot;);
+        emit log_named_uint(&quot;credit line for #8936&quot;, line);
+        emit log_named_uint(&quot;ltvBps&quot;, IValuerLive(VALUER).ltvBps());
+    }
+
+    function testFork_LenderCanSeedAndWithdraw() public {
+        _fork();
+        BurrowVaultLite v = new BurrowVaultLite(SQK, NFT, STAKING, VALUER, RATE);
+        deal(SQK, address(this), 10_000e18);
+        (bool ok,) = SQK.call(abi.encodeWithSignature(&quot;approve(address,uint256)&quot;, address(v), type(uint256).max));
+        assertTrue(ok);
+        uint256 shares = v.deposit(1_000e18, 0);
+        assertEq(shares, 1_000e18 - 1000);
+        uint256 out = v.withdraw(100e18, 0);
+        assertApproxEqAbs(out, 100e18, 1e12, &quot;round trip&quot;);
+    }
+}
+
+interface IStakingLive { function accountPower(address) external view returns (uint256); function claimable(address) external view returns (uint256); }
+interface INFTLive { function ownerOf(uint256) external view returns (address); function setApprovalForAll(address, bool) external; function transferFrom(address, address, uint256) external; function level(uint256) external view returns (uint8); }
+
+/// Real Squeekchain staking on a Sepolia fork: escrow → stake → borrow → repay → close.
+contract ForkLiteIntegration is ForkLiteTest {
+    uint256 constant ID = 8936;   // currently in staking custody; pranked out to a test borrower
+    address borrower = address(0xB0B);
+
+    function testFork_OpenBorrowRepayCloseAgainstRealStaking() public {
+        _fork();
+        BurrowVaultLite v = new BurrowVaultLite(SQK, NFT, STAKING, VALUER, RATE);
+        INFTLive nft = INFTLive(NFT);
+        address holder = nft.ownerOf(ID);
+        vm.prank(holder); nft.transferFrom(holder, borrower, ID);
+        assertEq(nft.ownerOf(ID), borrower, &quot;pranked out&quot;);
+        emit log_named_uint(&quot;level&quot;, nft.level(ID));
+        // lender
+        deal(SQK, address(this), 10_000e18);
+        (bool ok,) = SQK.call(abi.encodeWithSignature(&quot;approve(address,uint256)&quot;, address(v), type(uint256).max)); assertTrue(ok);
+        v.deposit(5_000e18, 0);
+        // borrower escrows
+        uint256[] memory ids = new uint256[](1); ids[0] = ID;
+        vm.startPrank(borrower);
+        nft.setApprovalForAll(address(v), true);
+        v.openPosition(ids);
+        vm.stopPrank();
+        assertEq(nft.ownerOf(ID), STAKING, &quot;restaked by vault&quot;);
+        uint256 pw = IStakingLive(STAKING).accountPower(address(v));
+        emit log_named_uint(&quot;staking.accountPower(vault)&quot;, pw);
+        assertGt(pw, 0, &quot;vault holds staking power&quot;);
+        uint256 line = v.creditLineOf(borrower);
+        emit log_named_uint(&quot;creditLine&quot;, line);
+        assertGt(line, 0);
+        vm.prank(borrower); v.borrow(line / 2);
+        assertEq(v.debtOf(borrower), line / 2);
+        // sweep does not revert even with nothing claimable yet
+        uint256 swept = v.sweepRewards();
+        emit log_named_uint(&quot;swept&quot;, swept);
+        vm.warp(block.timestamp + 30 days);
+        uint256 debt = v.debtOf(borrower);
+        assertGt(debt, line / 2, &quot;interest accrued&quot;);
+        deal(SQK, borrower, debt);
+        vm.startPrank(borrower);
+        (ok,) = SQK.call(abi.encodeWithSignature(&quot;approve(address,uint256)&quot;, address(v), type(uint256).max)); assertTrue(ok);
+        v.repay(type(uint256).max);
+        v.closePosition();
+        vm.stopPrank();
+        assertEq(nft.ownerOf(ID), borrower, &quot;NFT returned from real staking&quot;);
+        assertEq(v.debtOf(borrower), 0);
+        // lender exits with interest
+        uint256 out = v.withdraw(v.balanceOf(address(this)), 0);
+        assertGt(out, 5_000e18, &quot;lender earned interest&quot;);
+    }
+
+    function testFork_LiquidateAgainstRealStaking() public {
+        _fork();
+        BurrowVaultLite v = new BurrowVaultLite(SQK, NFT, STAKING, VALUER, RATE);
+        INFTLive nft = INFTLive(NFT);
+        address holder = nft.ownerOf(ID);
+        vm.prank(holder); nft.transferFrom(holder, borrower, ID);
+        deal(SQK, address(this), 100_000e18);
+        (bool ok,) = SQK.call(abi.encodeWithSignature(&quot;approve(address,uint256)&quot;, address(v), type(uint256).max)); assertTrue(ok);
+        v.deposit(50_000e18, 0);
+        uint256[] memory ids = new uint256[](1); ids[0] = ID;
+        vm.startPrank(borrower); nft.setApprovalForAll(address(v), true); v.openPosition(ids);
+        uint256 line = v.creditLineOf(borrower); v.borrow(line); vm.stopPrank();
+        vm.warp(block.timestamp + 1500 days);       // 8% APR for ~4 years pushes debt past 75% of value
+        assertGt(v.debtOf(borrower), line);
+        uint256 before = IERC20B(SQK).balanceOf(address(this));
+        v.liquidate(borrower);
+        uint256 paid = before - IERC20B(SQK).balanceOf(address(this));
+        emit log_named_uint(&quot;liquidator paid&quot;, paid);
+        assertEq(nft.ownerOf(ID), address(this), &quot;liquidator got the NFT back from real staking&quot;);
+        assertGe(paid, line, &quot;paid at least the debt&quot;);
+    }
+}
+interface IERC20B { function balanceOf(address) external view returns (uint256); }
+</code></pre></section></main></body></html>

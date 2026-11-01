@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-31T14:14:26.439Z",
+  "checkedAt": "2026-11-01T06:02:18.251Z",
   "passed": true,
   "results": [
     {
@@ -216,6 +216,207 @@
       "chain": {
         "runtimeBytes": 5187,
         "gasUsed": 8588909,
+        "gasUnderCap": true,
+        "deploymentSucceeded": true
+      }
+    },
+    {
+      "name": "wheelBond",
+      "address": "0xF8Dec22b7bb63dfC7e671F86B427a466476D0d1b",
+      "source": "https://sourcify.dev/server/v2/contract/11155111/0xF8Dec22b7bb63dfC7e671F86B427a466476D0d1b?fields=all",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "sources": [
+        {
+          "path": "src/WheelBond.sol",
+          "identical": true,
+          "sha256": "c6c7d6903b7aa87b51ab4ec6feb8186697e46a2a69d780516b37ca1c5fd2a8ec"
+        }
+      ],
+      "checkedSelectors": [
+        {
+          "signature": "bonds(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "bonusOf(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "exitEarly(uint256,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "lock(uint256,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "nextId()",
+          "matches": true
+        },
+        {
+          "signature": "redeem(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "work()",
+          "matches": true
+        },
+        {
+          "signature": "Locked(uint256,address,uint256,uint256,uint256)",
+          "matches": true
+        }
+      ],
+      "chain": {
+        "runtimeBytes": 4864,
+        "gasUsed": 7846510,
+        "gasUnderCap": true,
+        "deploymentSucceeded": true
+      }
+    },
+    {
+      "name": "hmtr",
+      "address": "0x48313863170fe6845182fD9b516d6d7d9279ffCE",
+      "source": "https://sourcify.dev/server/v2/contract/11155111/0x48313863170fe6845182fD9b516d6d7d9279ffCE?fields=all",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "sources": [
+        {
+          "path": "src/WheelStock.sol",
+          "identical": true,
+          "sha256": "fa472df4fca3ed667fa3e89385e12aa915d42017c4d3b3658d654f2795ef9588"
+        }
+      ],
+      "checkedSelectors": [
+        {
+          "signature": "allowance(address,address)",
+          "matches": true
+        },
+        {
+          "signature": "approve(address,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "balanceOf(address)",
+          "matches": true
+        },
+        {
+          "signature": "marketOpen()",
+          "matches": true
+        },
+        {
+          "signature": "mint(uint256,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "nav()",
+          "matches": true
+        },
+        {
+          "signature": "pouch()",
+          "matches": true
+        },
+        {
+          "signature": "redeem(uint256,uint256)",
+          "matches": true
+        },
+        {
+          "signature": "sharePrice()",
+          "matches": true
+        },
+        {
+          "signature": "stakedOf(address)",
+          "matches": true
+        },
+        {
+          "signature": "stakedShares()",
+          "matches": true
+        },
+        {
+          "signature": "stake(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "totalSupply()",
+          "matches": true
+        },
+        {
+          "signature": "unitsOf(address)",
+          "matches": true
+        },
+        {
+          "signature": "unstakeAt(address)",
+          "matches": true
+        },
+        {
+          "signature": "unstake(uint256)",
+          "matches": true
+        }
+      ],
+      "chain": {
+        "runtimeBytes": 5019,
+        "gasUsed": 8215216,
+        "gasUnderCap": true,
+        "deploymentSucceeded": true
+      }
+    },
+    {
+      "name": "garage",
+      "address": "0xfB7cEA0F7270ef5fF6DC38Be0e09e730dE28e652",
+      "source": "https://sourcify.dev/server/v2/contract/11155111/0xfB7cEA0F7270ef5fF6DC38Be0e09e730dE28e652?fields=all",
+      "match": "exact_match",
+      "creationMatch": "exact_match",
+      "runtimeMatch": "exact_match",
+      "sources": [
+        {
+          "path": "src/HamsterGarage.sol",
+          "identical": true,
+          "sha256": "72d542954c811cd97d27618bb91d606604dbcccb288c12fa9be1c110f0f91296"
+        }
+      ],
+      "checkedSelectors": [
+        {
+          "signature": "claimCar(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "leave(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "nextCar()",
+          "matches": true
+        },
+        {
+          "signature": "nextSpot()",
+          "matches": true
+        },
+        {
+          "signature": "park(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "readyAt(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "spots(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "valueOf(uint256)",
+          "matches": true
+        },
+        {
+          "signature": "Parked(uint256,address,uint256,uint256)",
+          "matches": true
+        }
+      ],
+      "chain": {
+        "runtimeBytes": 6653,
+        "gasUsed": 10834771,
         "gasUnderCap": true,
         "deploymentSucceeded": true
       }

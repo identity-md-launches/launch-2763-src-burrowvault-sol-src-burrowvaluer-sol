@@ -1,0 +1,23 @@
+{
+  "method": "WCAG sRGB relative luminance of browser-computed opaque caption colors; art fallback uses the declared colors confirmed in the offline probe.",
+  "pairs": {
+    "lightCaption": {
+      "foreground": "rgb(85, 82, 77)",
+      "background": "rgb(253, 252, 250)",
+      "ratio": 7.584641618787109,
+      "passed": true
+    },
+    "darkCaption": {
+      "foreground": "rgb(169, 167, 162)",
+      "background": "rgb(26, 26, 25)",
+      "ratio": 7.245657362856621,
+      "passed": true
+    },
+    "artFallback": {
+      "foreground": "rgb(236,235,232)",
+      "background": "rgb(11,10,9)",
+      "ratio": 16.59316187235556,
+      "passed": true
+    }
+  }
+}

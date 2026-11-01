@@ -1,0 +1,53 @@
+{
+  "source": "https://burrow-squeek.vercel.app/",
+  "retrievedAt": "2026-11-01T05:52:07.638Z",
+  "files": {
+    "index.html": {
+      "bytes": 13279,
+      "sha256": "97fbb9521ad044053e54ee83a98b4cf9464d08fde55dfb4c6b6707b9842ba224"
+    },
+    "app.js": {
+      "bytes": 36637,
+      "sha256": "f1e05a3933a9a3f4975ee4e74f7a5f6f401140c553c98952adee7df3229f361e"
+    },
+    "config.js": {
+      "bytes": 1562,
+      "sha256": "d59315224591ebfe20d74b927d586979000b614addac4184e3583204dd818f02"
+    },
+    "wheel.js": {
+      "bytes": 12097,
+      "sha256": "50d6d33d2e5423131571afc3d0fb79c523a63eba224c81d6c49487ed03490bf0"
+    },
+    "nft3d.js": {
+      "bytes": 4840,
+      "sha256": "0c3b317b3ae4b8cc78dceca6d6f7d236e7aa4f6fd54b2901b7cafe818b14ccb1"
+    },
+    "garage3d.js": {
+      "bytes": 6061,
+      "sha256": "dcbbd6b0eb0876fd4bbd87729c2ebd05b1a68cd670d46ef58ab36755e38b3466"
+    },
+    "styles.css": {
+      "bytes": 13975,
+      "sha256": "c2f624c7ed9adca3913c51e324ed035207a7e0d85026f90a416de018068374e4"
+    },
+    "assets/three.min.js": {
+      "bytes": 669884,
+      "sha256": "170c6789f43217c96b3170f4b42fafe135de7f7cd48497a4218f9757ee1d49fa"
+    },
+    "source/index.html": {
+      "bytes": 6051,
+      "sha256": "340ba4e022612adba880bd397063b33d602bc6c112fc62cf4dc905ce00c2c0dc"
+    }
+  },
+  "configIdentical": true,
+  "threeIdentical": true,
+  "adaptations": [
+    "Preserve existing wallet dialog and transaction/account safeguards.",
+    "Store every runtime library under assets/; fonts are local.",
+    "Keep source links explicit .html for static gateways.",
+    "Use semantic controls, status feedback, responsive forms, reduced motion, honest unavailable states.",
+    "Shorten the hero copy while retaining the operator\u2019s design and primary destinations.",
+    "Coast to idle using elapsed wall time and honor live reduced-motion changes.",
+    "Distinguish the settled on-chain market state from measured hardware RPM."
+  ]
+}

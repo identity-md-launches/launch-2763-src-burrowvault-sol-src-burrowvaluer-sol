@@ -1,6 +1,9 @@
 # Burrow
 
-SQK lending against Squeek NFTs on Sepolia. A borrower escrows Squeek NFTs, the vault
+A financial district on Sepolia powered by Squeekchain’s real hamster wheel: NFT loans,
+wheel bonds, Hamster Motors shares and a garage that earns on-chain cars.
+
+For loans, a borrower escrows Squeek NFTs, the vault
 re-stakes them on Squeekchain and names itself claim recipient, so the mining rewards of the
 collateral pay the loan down by themselves. Lenders hold bSQK, an ERC-4626-style share whose
 price rises with loan interest, marketplace fees and a Uniswap v4 swap hook.
@@ -15,6 +18,9 @@ Unaudited, testnet only. SQK has no value.
 | `BurrowVaultLite` | bSQK vault: deposit / withdraw, openPosition / borrow / repay / closePosition, sweepRewards, liquidate. No owner, no admin | 9.8 KB |
 | `BurrowMarket` | Fixed-price and Dutch-auction NFT sales, fee ≤5% donated to the vault | 6.5 KB |
 | `BurrowHook` | v4 afterSwap + afterSwapReturnDelta hook, skims ≤1% of SQK output into the vault. Address must carry flag bits `0x44`, so it is CREATE2-mined through `HookFactory` | 5.2 KB |
+| `WheelBond` | Locks bSQK for settled wheel work; maturity bonus and declining early-exit penalty | 4,864 bytes |
+| `WheelStock` | Hamster Motors (HMTR), backed by bSQK; wheel-dependent fees, staking and cheek pouch | 5,019 bytes |
+| `HamsterGarage` | Parks and stakes HMTR; after 30 days a position can claim an ERC-721 car | 6,653 bytes |
 
 Addresses are in the UI (Contracts panel) and in `burrow_deployed.json` next to this repo.
 
@@ -49,7 +55,7 @@ is written for that budget.
 
 ```
 forge build
-forge test                                        # 70 unit, invariant and mutation-backed tests
+forge test                                        # existing contract suites
 SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com forge test --match-test testFork
 ```
 
@@ -60,12 +66,22 @@ a real swap through the Sepolia Uniswap v4 PoolManager with the hook attached.
 `test/Fixtures.t.sol` declares Foundry's cheatcode ABI directly; `forge-std` is only needed by
 `VaultLite.t.sol` and `ForkLite.t.sol`.
 
-## Deploy
+## Live deployments
 
-`deploy_v2.mjs` (ethers) deploys Valuer → Vault → Market, then mines a CREATE2 salt whose
-address carries `0x44` in the low 14 bits and deploys the hook through `HookFactory`. Gas is set
-by hand because the public RPC under-estimates a CREATE2 that runs out of gas and returns
-address zero.
+This website change deploys nothing. The seven live protocol sources match Sourcify exactly;
+`burrow_deployed.json` records their addresses, creation transactions and source hashes.
+`web/config.js` is byte-identical to the operator's live config retrieved for this assignment.
+The three wheel-native addresses are:
+
+| Contract | Sepolia address |
+| --- | --- |
+| WheelBond | `0xF8Dec22b7bb63dfC7e671F86B427a466476D0d1b` |
+| Hamster Motors / WheelStock | `0x48313863170fe6845182fD9b516d6d7d9279ffCE` |
+| HamsterGarage | `0xfB7cEA0F7270ef5fF6DC38Be0e09e730dE28e652` |
+
+The remaining addresses are in the Contracts panel and deployment record. The website's Source
+pages are generated from the actual repository sources and tests, with explicit `.html` links
+for static hosts. No private key or wallet credential belongs in this export.
 
 ## Known limitations
 
@@ -102,3 +118,101 @@ HMTR/SQK trades on a Uniswap v4 pool (id `0x8408dd70…f406`) that uses the Burr
 ## Hamster Garage
 
 `src/HamsterGarage.sol` (Sepolia `0xfB7cEA0F7270ef5fF6DC38Be0e09e730dE28e652`) stakes parked HMTR back into Hamster Motors, so a spot keeps compounding exit fees. After 30 days the owner can claim one on-chain ERC-721 car (HCAR). Leaving early keeps the HMTR and forfeits an unclaimed car. Minimum park is 100 HMTR. No owner, no admin. Each park restarts the 200 work wait on the garage's HMTR stake, so a leave can be delayed, never blocked for good while the wheel turns.
+
+## Website: install, preview and rebuild
+
+The app retains its vanilla stack and the existing wallet dialog. `web/` is the editable source;
+`dist/` is the complete, committed production export consumed by static hosting. Serve it over
+HTTP(S), including from a gateway subpath. There is no server-side app or route rewrite.
+
+Node.js 20+ is sufficient to build and preview with the committed libraries:
+
+```sh
+node web/tools/build.mjs
+node web/tools/preview.mjs 4173
+# Open http://localhost:4173/preview/ ; Ctrl-C stops the preview.
+```
+
+The build verifies config addresses and all seven source hashes, generates matching `web/source/`
+and `dist/source/` pages, copies runtime files and checks every static reference. It fails on
+missing assets, external/inline scripts, root-relative URLs, symlinks, packaging archives,
+`vendor/` or `node_modules/` runtime directories. All browser libraries live in `assets/`,
+including the operator's Three.js r160 global build and the existing Coinbase SDK bundle.
+No script or font loads from a CDN. The preview enforces `script-src 'self'`.
+
+Install validation tools from the unchanged manifest/lockfile into disposable space:
+
+```sh
+node web/tools/install.mjs
+npm --prefix web run typecheck
+PLAYWRIGHT_BROWSERS_PATH=/tmp/burrow-browsers node test/scratch/site-tooling/node_modules/playwright/cli.js install chromium webkit
+PLAYWRIGHT_BROWSERS_PATH=/tmp/burrow-browsers npm --prefix web test
+```
+
+`install.mjs` uses `npm ci` in `test/scratch/site-tooling/` and an npm cache under `/tmp`; it
+creates no dependency directory inside `web/` or `dist/` and changes no project dependencies.
+The supplied lockfile includes TypeScript, Playwright, esbuild, Three.js types and the Coinbase
+SDK. On other machines, omit `PLAYWRIGHT_BROWSERS_PATH` to use Playwright's default browser path.
+WebKit also requires its platform libraries. The `typecheck` script uses `tsc --noEmit` with
+`allowJs`/`checkJs` over app, config, wallet, wheel, voxel and garage source.
+
+Additional checks, from the repository root:
+
+```sh
+node web/tools/export-check.mjs dist
+node web/tools/verify-deployment.mjs
+PLAYWRIGHT_BROWSERS_PATH=/tmp/burrow-browsers node web/tools/live-check.mjs
+PLAYWRIGHT_BROWSERS_PATH=/tmp/burrow-browsers IMD_PLAYWRIGHT="$PWD/test/scratch/site-tooling/node_modules/playwright/index.mjs" node .imd/reads/skills/design-critic/scripts/taste.mjs --out test/scratch/taste
+```
+
+The last command uses the pinned assignment probe, supplied only in this workspace; it is removed
+from the submitted repository. The other checks are delivered. `test.mjs` also accepts a case-name
+substring for a targeted rerun. Test providers and feed fixtures stay under `web/tools/` and are
+never copied into `dist/`. Tests never broadcast a transaction. `live-check.mjs` reads public data,
+checks both themes at five widths and saves its actual report/screenshots in `web/validation/`.
+
+For an optional Coinbase bundle refresh after installing tools, `npm --prefix web run vendor`
+writes `web/assets/coinbase.js` and license notices. It preserves the operator's exact
+`web/assets/three.min.js`; it creates no directory named `vendor`. Rebuild afterwards.
+The required fonts, icons, Three.js, Coinbase bundle, attribution and static source pages are
+included. No registry mirror, dependency archive or package-manager cache is needed to serve it.
+
+## Website behavior and validation
+
+The clay hamster and wheel follow measured RPM from `https://api.squeekchain.com/v1`, coast to
+rest when idle and stop for stale/offline samples, hidden pages and reduced motion. Six collateral
+previews are explicitly labeled collection previews; they use the NFT's on-chain `tokenURI` art,
+with a shared WebGL renderer and flat-image fallback. Account inventories check actual custody.
+The garage is the operator's 3D clay scene. Chain data uses the operator's public Sepolia RPC
+list, batches up to ten calls and retries failed calls on the next endpoint.
+
+Wheel bonds, Motors and Garage show live public stats and account data. Writes use the addresses
+in config, with the selected EIP-6963/Smart Wallet provider, Sepolia/account checks, serialized
+approvals, balance and decimal validation, receipt feedback and account-change protection.
+Bonds accept integer work terms; stake/garage exits respect their wheel-work waits. Failed reads
+are reported as unavailable, keep affected actions disabled and can recover through Load or the
+30-second refresh. Full source and explorer references are available in the Contracts panel.
+
+Production build, JavaScript typecheck and all 34 interaction cases passed. Live browser validation passed under the
+same-origin script policy, with six voxel previews, working scenes, loaded local fonts and no
+page overflow at 320, 390, 768, 1120 and 1440px in both themes. At 390×844 the primary action ends
+at 420.19px. The pinned design probe passed 16/16 checks for both live and offline states after
+contrast repairs. Final interaction totals, commands, evidence and the six-domain review are
+recorded in [web/validation/validation.md](web/validation/validation.md). Implemented design tokens and
+components are documented in [DESIGN.md](DESIGN.md).
+
+The live feed reported both idle and running samples during inspection. Nonzero RPM, idle stopping
+and preference changes are also exercised with controlled browser events. Market status follows
+settled on-chain work and is shown separately from live hardware RPM. Transaction encoding, approvals, pending/success,
+revert, rejection, network switching and account changes use a deterministic mock wallet; no real
+signature or on-chain write was attempted. Coinbase SDK import and phone-link construction are
+checked; actual passkey sessions and native wallet handoffs are unverified. WebKit was downloaded
+but cannot launch here because required system libraries are unavailable. Native Safari, physical
+devices, screen readers and browser-native zoom remain unverified. Solidity suites were not rerun
+for this frontend update; their sources are unchanged and checked against Sourcify.
+
+The static UI, libraries, fonts, icons and source pages load without an external asset host.
+Current balances, API readings and uncached tokenURI art require network access; an offline
+export is not an offline copy of blockchain state. Offline failures show explicit unavailable
+states while Connect remains usable. The operator's legacy global Three.js build emits a
+deprecation warning; no JavaScript exception or missing local resource was observed.

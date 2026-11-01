@@ -1,0 +1,114 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>test/BurrowValuer.t.sol · Burrow source</title><meta name="description" content="Burrow source, tests and deployment record"><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="../styles.css"><style>pre{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:16px;overflow:auto;font:12px/18px var(--mono);tab-size:4}.wrap{max-width:1100px}.source-address{overflow-wrap:anywhere;white-space:normal}.source-table{overflow:auto}.source-table a{display:inline-block;min-height:24px}.source-list a{border:0}.source-header{flex-wrap:wrap;height:auto;min-height:64px;gap:8px;padding-block:12px}.source-header .chip{white-space:normal}</style></head><body><header class="top"><div class="topin source-header"><a class="brand" href="../index.html" style="border:0">Burrow</a><span class="chip">source, exactly what is deployed</span><span class="sp"></span><a class="chip" href="./index.html">all files</a></div></header><main class="wrap"><section class="panel"><div class="ph"><h1 style="font-size:16px">test/BurrowValuer.t.sol</h1></div><pre tabindex="0" aria-label="test/BurrowValuer.t.sol source"><code>// SPDX-License-Identifier: MIT
+pragma solidity 0.8.26;
+import {Test} from &quot;forge-std/Test.sol&quot;;
+import {BurrowValuer} from &quot;../src/BurrowValuer.sol&quot;;
+
+contract MockNFT {
+    mapping(uint256 =&gt; address) public owners; mapping(uint256 =&gt; uint8) public levels;
+    function mint(address to, uint256 id, uint8 l) external { owners[id] = to; levels[id] = l; }
+    function ownerOf(uint256 id) external view returns (address) { require(owners[id] != address(0), &quot;nope&quot;); return owners[id]; }
+    function level(uint256 id) external view returns (uint8) { return levels[id]; }
+}
+/// Mirrors Sepolia: basePower(level) = 1000 * 2.2^(level-1), zero past the configured top.
+contract MockStaking {
+    address public immutable collection; uint256 public top = 10; uint256 public huge;
+    constructor(address c) { collection = c; }
+    function setTop(uint256 t) external { top = t; }
+    function setHuge(uint256 h) external { huge = h; }
+    function basePower(address c, uint8 l) external view returns (uint256 p) {
+        if (c != collection || l == 0 || l &gt; top) return 0;
+        if (huge != 0) return huge;
+        p = 1000; for (uint256 i = 1; i &lt; l; ++i) p = p * 22 / 10;
+    }
+}
+
+contract BurrowValuerTest is Test {
+    MockNFT nft; MockStaking stk; BurrowValuer valuer;
+    function setUp() public {
+        nft = new MockNFT(); stk = new MockStaking(address(nft));
+        valuer = new BurrowValuer(address(this), address(nft), address(stk), 1e18, 0.5e18, 2e18, 6000);
+        nft.mint(address(0xB0B), 1, 1); nft.mint(address(0xB0B), 2, 2); nft.mint(address(0xB0B), 3, 3);
+    }
+    function test_PowerComesFromStakingNotATable() public view {
+        assertEq(valuer.powerForLevel(1), 1000);
+        assertEq(valuer.powerForLevel(2), 2200);
+        assertEq(valuer.powerForLevel(3), 4840);
+        assertEq(valuer.powerForLevel(4), 10648);
+    }
+    function test_CreditLineSumsPowerThenAppliesLtvOnce() public view {
+        uint256[] memory ids = new uint256[](3); ids[0]=1; ids[1]=2; ids[2]=3;
+        assertEq(valuer.totalPower(ids), 1000 + 2200 + 4840);
+        assertEq(valuer.collateralValue(ids), 8040e18);
+        assertEq(valuer.creditLine(ids), 8040e18 * 6000 / 10000);
+    }
+    function test_EmptyAndUnorderedIds() public {
+        uint256[] memory none = new uint256[](0);
+        assertEq(valuer.creditLine(none), 0);
+        uint256[] memory bad = new uint256[](2); bad[0]=2; bad[1]=1;
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.TokenIdsNotStrictlyAscending.selector, 2, 1));
+        valuer.creditLine(bad);
+        uint256[] memory many = new uint256[](33);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.TooManyTokenIds.selector, 33));
+        valuer.creditLine(many);
+    }
+    function test_BurnedOrUnknownTokenIsWorthless() public {
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.InvalidToken.selector, 99));
+        valuer.powerOf(99);
+    }
+    function test_UnpricedLevelFailsClosed() public {
+        nft.mint(address(0xB0B), 4, 11);         // chain prices up to level 10 in the mock
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.UnsupportedLevel.selector, 11));
+        valuer.powerOf(4);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.UnsupportedLevel.selector, 0));
+        valuer.powerForLevel(0);
+        stk.setHuge(1e24 + 1);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.PowerTooLarge.selector, 1, 1e24 + 1));
+        valuer.powerForLevel(1);
+    }
+    function test_ValuationFollowsChainWhenLevelChanges() public {
+        uint256[] memory ids = new uint256[](1); ids[0]=1;
+        uint256 before = valuer.creditLine(ids);
+        nft.mint(address(0xB0B), 1, 2);          // merged up a level
+        assertEq(valuer.creditLine(ids), before * 2200 / 1000);
+    }
+    function test_ConstructorGuards() public {
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.InvalidCollection.selector, address(0xdead)));
+        new BurrowValuer(address(this), address(0xdead), address(stk), 1, 1, 2, 6000);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.InvalidStaking.selector, address(0xdead)));
+        new BurrowValuer(address(this), address(nft), address(0xdead), 1, 1, 2, 6000);
+        MockStaking other = new MockStaking(address(0x1234));   // prices a different collection
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.InvalidStaking.selector, address(other)));
+        new BurrowValuer(address(this), address(nft), address(other), 1, 1, 2, 6000);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.InvalidLtvBps.selector, 6001));
+        new BurrowValuer(address(this), address(nft), address(stk), 1, 1, 2, 6001);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.InvalidPriceBand.selector, 0, 2));
+        new BurrowValuer(address(this), address(nft), address(stk), 1, 0, 2, 6000);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.PriceOutsideBand.selector, 3));
+        new BurrowValuer(address(this), address(nft), address(stk), 3, 1, 2, 6000);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.InvalidPriceBand.selector, 1, type(uint256).max));
+        new BurrowValuer(address(this), address(nft), address(stk), 1, 1, type(uint256).max, 6000);
+    }
+    function test_PriceGovernanceTimelockBandAndStep() public {
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.PriceChangeTooLarge.selector, 1e18, 1.3e18));
+        valuer.proposePricePerPower(1.3e18);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.PriceOutsideBand.selector, 0.4e18));
+        valuer.proposePricePerPower(0.4e18);
+        valuer.proposePricePerPower(1.2e18);
+        vm.expectRevert(abi.encodeWithSelector(BurrowValuer.PriceChangeNotReady.selector, block.timestamp + 2 days));
+        valuer.executePricePerPower();
+        vm.warp(block.timestamp + 2 days);
+        valuer.executePricePerPower();
+        assertEq(valuer.pricePerPower(), 1.2e18);
+        assertEq(valuer.lastPriceChange(), block.timestamp);
+        vm.prank(address(0xBAD));
+        vm.expectRevert();
+        valuer.proposePricePerPower(1.1e18);
+    }
+    function test_MaxPowerNeverOverflows() public {
+        BurrowValuer v = new BurrowValuer(address(this), address(nft), address(stk), 1, 1, type(uint256).max / (1e24 * 32), 6000);
+        stk.setHuge(1e24);
+        uint256[] memory ids = new uint256[](32); for (uint256 i; i &lt; 32; ++i) { ids[i] = 100 + i; nft.mint(address(1), 100 + i, 1); }
+        v.collateralValue(ids);     // must not panic
+    }
+}
+</code></pre></section></main></body></html>

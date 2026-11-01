@@ -22,10 +22,21 @@ export interface AppState {
   dur: number;
   observedAt: number;
   rpm: number;
+  hmPrice?: bigint;
+  hmBalance?: bigint;
+  hmUnits?: bigint;
+  hmUnstakeAt?: bigint;
+  hmReady?: boolean;
+  bondReady?: boolean;
+  garageReady?: boolean;
+  work?: bigint;
+  workDay?: number;
 }
 declare global {
   interface Window {
     ethereum?: Provider;
     __rpm?: number;
+    THREE: typeof import('../test/scratch/site-tooling/node_modules/@types/three');
+    nft3d?: (element: Element, image: HTMLImageElement) => void;
   }
 }

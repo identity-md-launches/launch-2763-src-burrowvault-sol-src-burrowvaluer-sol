@@ -7,8 +7,17 @@ import { CONFIG as C } from '../config.js';
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const record = JSON.parse(await readFile(join(root, 'burrow_deployed.json'), 'utf8'));
 const app = await readFile(join(root, 'web/app.js'), 'utf8');
-const selectors = Object.fromEntries([...app.matchAll(/(\w+):'(0x[0-9a-f]{8})'/g)].map(m => [m[1], m[2]]));
-const topics = Object.fromEntries([...app.matchAll(/(\w+):'(0x[0-9a-f]{64})'/g)].map(m => [m[1], m[2]]));
+function mapFor(name) {
+  const block = app.match(new RegExp('const ' + name + ' = \\{([\\s\\S]*?)\\};'))?.[1] || '';
+  return Object.fromEntries([...block.matchAll(/(\w+):'(0x[0-9a-f]+)'/g)].map(match => [match[1], match[2]]));
+}
+const selectors = mapFor('SEL'), topics = mapFor('TOPIC');
+const hs = mapFor('HS'), bs = mapFor('BS'), gs = mapFor('GS');
+const perContract = {
+  wheelBond: { lock:bs.lock, redeem:bs.redeem, exitEarly:bs.exit, bonds:bs.bonds, bonusOf:bs.bonusOf, work:bs.work, nextId:bs.nextId },
+  hmtr: { ...hs, balanceOf:selectors.balanceOf, totalSupply:selectors.totalSupply, allowance:selectors.allowance, approve:selectors.approve },
+  garage: { park:gs.park, claimCar:gs.claim, leave:gs.leave, spots:gs.spots, valueOf:gs.value, readyAt:gs.ready, nextSpot:gs.nextSpot, nextCar:gs.nextCar },
+};
 const usedInValuer = new Set(['pricePerPower', 'ltvBps', 'lastPriceChange', 'powerForLevel']);
 async function rpc(method, params) {
   let last;
@@ -37,9 +46,14 @@ const results = await Promise.all(Object.entries(record.contracts).map(async ([n
     if (!(method in selectors) || (name === 'valuer') !== usedInValuer.has(method)) continue;
     checkedSelectors.push({ signature: signature.signature, matches: selectors[method] === signature.signatureHash4 });
   }
-  if (name === 'vault') for (const event of contract.signatures.event) {
+  if (perContract[name]) for (const signature of contract.signatures.function) {
+    const method = signature.signature.split('(')[0];
+    if (method in perContract[name]) checkedSelectors.push({ signature: signature.signature, matches: perContract[name][method] === signature.signatureHash4 });
+  }
+  if (['vault','wheelBond','garage'].includes(name)) for (const event of contract.signatures.event) {
     const eventName = event.signature.split('(')[0].toLowerCase();
-    if (eventName in topics) checkedSelectors.push({ signature: event.signature, matches: topics[eventName] === event.signatureHash32 });
+    const value = name === 'garage' ? (eventName === 'parked' ? gs.parked : null) : name === 'wheelBond' ? (eventName === 'locked' ? topics.locked : null) : topics[eventName];
+    if (value) checkedSelectors.push({ signature: event.signature, matches: value === event.signatureHash32 });
   }
   let chain;
   try {
@@ -49,7 +63,7 @@ const results = await Promise.all(Object.entries(record.contracts).map(async ([n
   return { name, address: entry.address, source: url, match: contract.match, creationMatch: contract.creationMatch, runtimeMatch: contract.runtimeMatch, sources, checkedSelectors, chain };
 }));
 const ok = results.every(r => r.match === 'exact_match' && r.creationMatch === 'exact_match' && r.runtimeMatch === 'exact_match' && r.sources.every(s => s.identical) && r.checkedSelectors.every(s => s.matches) && (!('gasUnderCap' in r.chain) || (r.chain.gasUnderCap && r.chain.deploymentSucceeded)));
-await mkdir(join(root, 'artifacts'), { recursive: true });
-await writeFile(join(root, 'artifacts/deployment-verification.json'), JSON.stringify({ checkedAt: new Date().toISOString(), passed: ok, results }, null, 2) + '\n');
+await mkdir(join(root, 'web/validation'), { recursive: true });
+await writeFile(join(root, 'web/validation/deployment-verification.json'), JSON.stringify({ checkedAt: new Date().toISOString(), passed: ok, results }, null, 2) + '\n');
 console.log(JSON.stringify({ passed: ok, contracts: results.map(r => ({ name: r.name, exact: r.match, sourceMatches: r.sources.every(s => s.identical), selectorsChecked: r.checkedSelectors.length, chain: r.chain })) }, null, 2));
 if (!ok) process.exitCode = 1;

@@ -1,157 +1,170 @@
-# Burrow v2 design
+# Burrow interface
 
 ## Overview
 
-This is the operator's [Burrow reference UI](https://burrow-squeek.vercel.app), reproduced in
-plain HTML, CSS and JavaScript. Its audience is Sepolia SQK lenders and Squeek NFT borrowers.
-The visual idea is a working hamster wheel beside a compact lending dashboard: warm graphite
-surfaces, brass actions, fine dividers and tabular figures. The same light theme follows the
-system color preference. There is no added navigation system, marketing section or theme switch.
+Burrow is a Sepolia financial district: SQK lending against Squeek NFTs, bonds measured in
+wheel work, Hamster Motors shares and a garage that earns cars. This implementation keeps the
+operator's warm graphite/brass dashboard, clay dioramas and compact financial tables. It uses
+plain HTML, CSS and JavaScript, extending the existing wallet dialog and transaction safeguards.
 
-The source of truth is `web/styles.css`, with structure in `web/index.html`, dynamic panels in
-`web/app.js`, the connect dialog in `web/wallet.js` and the wheel in `web/wheel.js`. The production
-export copies these modules unchanged. The narrow additions at the end of the stylesheet repair
-keyboard focus, mobile fields, dialog layout and contrast within the reference's system.
+The visual idea is a quiet money market powered by one real hamster wheel. The hero introduces
+that relationship and links directly to Hamster Motors and Wheel bonds. Position, Collateral,
+Open positions, Motors and Garage occupy the primary column; chain data, lending, bonds, risk,
+revenue and contract references occupy the secondary column. DOM order becomes reading order
+when the columns collapse. There are no added routes, themes or decorative font families.
 
 ## Colors
 
-Tokens are CSS custom properties in `web/styles.css:7`. The base is dark; the light overrides
-are in `@media (prefers-color-scheme:light)`. Values are intentionally kept in the operator's
-hex/RGBA notation.
+Canonical tokens are in `web/styles.css:7`; the light override starts at line 18.
+`prefers-color-scheme` selects the existing themes. `data-theme="dark"` retains the source's
+explicit dark override; no theme control is added.
 
-| Token | Dark | Light | Use |
-| --- | --- | --- | --- |
-| `--bg` | `#141413` | `#f6f5f2` | Page background |
-| `--panel` | `#1a1a19` | `#fdfcfa` | Panels, header, dialog |
-| `--raised` | `#242322` | `#eeece7` | Neutral buttons, row hover, wheel stage |
-| `--sunk` | `#10100f` | `#e8e6e0` | Inputs and source code |
-| `--ink` | `#ecebe8` | `#1c1b19` | Primary text |
-| `--ink2` | `#a9a7a2` | `#55524d` | Body explanations, links |
-| `--ink3` | `#8d8b86` | `#6a6761` | Hints, captions, table headings |
-| `--line` | `rgba(236,235,232,.08)` | `rgba(28,27,25,.09)` | Dividers, panel outlines |
-| `--line2` | `rgba(236,235,232,.14)` | `rgba(28,27,25,.16)` | Control outlines |
-| `--acc`, `--warn` | `#d9a441` | `#9d6a0f` | Primary actions, focus, warnings |
-| `--acc-ink` | `#1b1403` | `#fff` | Text on primary buttons |
-| `--pos` | `#4cc38a` | `#15803d` | Connected/healthy/running states |
-| `--neg` | `#f15b61` | `#c52222` | Network, health and transaction errors |
+| Token / role | Dark | Light |
+| --- | --- | --- |
+| `--bg`, page | `#141413` | `#f6f5f2` |
+| `--panel`, panels/dialog | `#1a1a19` | `#fdfcfa` |
+| `--raised`, controls/scene | `#242322` | `#eeece7` |
+| `--sunk`, inputs/tiles | `#10100f` | `#e8e6e0` |
+| `--ink`, primary text | `#ecebe8` | `#1c1b19` |
+| `--ink2`, supporting text | `#a9a7a2` | `#55524d` |
+| `--ink3`, labels/metadata | `#8d8b86` | `#6a6761` |
+| `--acc`, action/focus | `#d9a441` | `#9d6a0f` |
+| `--acc-ink`, action label | `#1b1403` | `#fff` |
+| `--pos`, positive | `#4cc38a` | `#15803d` |
+| `--neg`, error | `#f15b61` | `#c52222` |
+| `--warn`, warning | `#d9a441` | `#9d6a0f` |
+| `--line`, structure | `rgba(236,235,232,.08)` | `rgba(28,27,25,.09)` |
+| `--line2`, controls/dividers | `rgba(236,235,232,.14)` | `rgba(28,27,25,.16)` |
 
-The reference's light brass and status/muted tokens were adjusted slightly after contrast
-checks. This does not change their roles or introduce another palette. Primary-button hover
-mixes the accent with 12% white in dark mode and 12% black in light mode. Status text, numbers
-and button labels accompany status color. See `web/validation/validation.md` for measured coverage;
-the canvas and translucent decorative layers are not blanket contrast-certified.
+Status also has text: connected/wrong network, running/idle/offline, confirmed/reverted and
+bond progress percentages. Color is not the only signal. Artwork has a fixed `#0b0a09`
+background, with `#ecebe8` for its unavailable label. The scene caption has an opaque
+`--panel` background so clay geometry cannot determine its contrast. The browser-computed
+caption pairs measure 7.58:1 in light mode and 7.25:1 in dark mode. The artwork fallback pair
+measures 16.59:1. Measurements and scope are in `web/validation/contrast.json`; these values do not
+claim contrast for lettering inside the 3D art.
 
 ## Typography
 
-`--sans` is `Geist`, followed by `ui-sans-serif`, `system-ui`, `-apple-system`, `Segoe UI`,
-`sans-serif`. `--mono` is `Geist Mono`, followed by `ui-monospace`, `SF Mono`, `Menlo`,
-`Consolas`, `monospace`. Both local Latin WOFF2 files are declared for weights 400–500 with
-`font-display:swap`; the browser confirmed both faces loaded. They are in `web/assets/` with
-their SIL Open Font Licenses in `web/licenses/`. There are no external font requests.
+Both font files are local under `web/assets/`: `geist-latin.woff2` and
+`geist-mono-latin.woff2`, licensed under SIL OFL. Their `@font-face` declarations request normal
+weights 400–500 with `font-display:swap`. Actual font loading was checked in Chromium.
 
-| Role | Size / line height | Weight / details |
+- `--sans`: Geist, UI/system sans, Apple/Segoe UI fallbacks. Prose, controls and headings.
+- `--mono`: Geist Mono, UI monospace, SF Mono/Menlo/Consolas fallbacks. Amounts, timestamps,
+  addresses, source code and tabular data. Changing numbers use `tabular-nums`.
+
+| Role | Size / line height | Weight |
 | --- | --- | --- |
-| Headline | `clamp(32px,3.6vw,48px)` / `1.1`; 36px at ≤640px | 500, `-.02em`, max 14ch |
-| Hero description | 16px / 24px; 15px on phones | 400, max 36rem |
-| Panel headings / hero actions | 15px / 20px | 500 |
-| Body / controls | 14px / 20px | 400 body, 500 buttons |
-| Table cells / hints / small buttons | 13px / 20px | 400, 500 on buttons |
-| Captions / KPI labels / table headings | 12px / 16px | 400 |
-| Empty-state heading / position figures | 20px / 28px or 24px | 500 |
-| Brand / hero facts | 16px / 20px or 24px | 500 |
+| Hero | `clamp(32px,3.6vw,48px)` / 1.1; 36px on phones | 500 |
+| Position figures / empty title | 20px / 24px or 28px | 500 |
+| Brand / facts / desktop description | 16px / 20px or 24px | 400–500 |
+| Section title / hero action / mobile description | 15px / 20px or 24px | 400–500 |
+| Body / standard controls | 14px / 20px | 400–500 |
+| Tables / panel hints / small controls | 13px / 20px | 400–500 |
+| Data labels / status / caption | 12px / 16px | 400–500 |
 
-The operator's scale is retained: five repeated sizes and two single-use sizes per tested
-entry viewport. It passes the pinned probe's six-repeated/eight-total threshold. Display type
-and the empty-state title remain intentional exceptions to the body scale. Numbers use Geist
-Mono and `font-variant-numeric:tabular-nums`; prose uses Geist. Inputs become 16px on phones to
-avoid automatic iOS input zoom. Footer prose is limited to 72ch; empty-state prose to 48ch.
+The probe found five repeatedly used sizes and two single-use sizes per disconnected viewport,
+within its six-repeat/eight-total threshold. Connected position figures use the existing 20px
+step. SVG gauge annotations and canvas artwork are separate graphics. The hero uses balanced
+wrapping, `-.02em` tracking and a final `16ch` measure. Supporting hero copy is capped at 36rem;
+footer paragraphs at 72ch. Body copy has natural tracking. Amount/address feedback wraps rather
+than truncates. Mobile inputs use 16px to avoid the usual iOS focus zoom; native-device behavior
+was not tested.
 
 ## Layout
 
-The page follows a 4px rhythm with 8/12/16/20/24/28/32/40/48px spacings. `.wrap`, `.topin`
-and `.foot` share a 1520px maximum width. The `--gut` outer inset is 24px, reduced to 16px
-at 640px. `.cols` and `.col` use a 24px gap and zero-minimum grid tracks to allow reflow.
+The existing 4px spacing rhythm supplies 4/8/12/16/20/24/28/32/40/48px steps. `.wrap` and
+`.topin` cap content at 1520px. Page gutters are 24px, falling to 16px on phones. Panel gaps are
+24px; panel bodies and forms use 16px padding with 8px within form groups. The hero has 48px
+copy padding on desktop, 40px 32px below 1120px and 32px 16px on phones.
 
 | Breakpoint | Implemented behavior |
 | --- | --- |
-| ≥1120px | Two dashboard columns, `1.6fr` and `minmax(360px,.9fr)`; two equal hero columns |
-| ≤1119px | One dashboard column; wheel below hero copy, 360px stage; hero padding 40px 32px |
-| ≤900px | Header is nonsticky and wraps; KPI strip moves to its own horizontally scrollable row |
-| ≤720px | Position gauge sits above the figures instead of beside them |
-| ≤640px | 16px gutters, 32px 16px hero padding, two-by-two facts, 300px stage, two-column forms, full-row amount/escrow controls, bottom wallet dialog |
+| ≥1120px | Split hero; main grid `minmax(0,1.6fr) minmax(360px,.9fr)` |
+| ≤1119px | Hero and panels stack; wheel stage is 360px high |
+| ≤900px | Header becomes static; metrics move to a named, focusable scrolling strip |
+| ≤720px | Position gauge moves above its figures |
+| ≤640px | 16px gutters, stacked hero actions, two-column facts, 300px wheel stage, 280px garage |
 
-The initial 390×844 screen shows Burrow, Connect wallet, the complete product headline,
-description and Open a position / Lend SQK actions. The main action ends at roughly 516px,
-matching the reference's composition. Tables scroll inside `.tw` rather than widening the
-page; on phones their 480px minimum preserves data columns. The KPI strip is horizontally scrollable at every width, including intermediate desktop widths;
-it and the table wrappers are keyboard focusable and named. Amounts/addresses in feedback wrap; full contract addresses
-are available in accessible names, link titles and the source listing.
+On phones the HMTR amount occupies a full row above three buttons. Bond amount and work term
+share a row, with Lock below. Other forms preserve their two-column adaptations. Definition
+lists allow both columns to wrap; values have a 32ch cap. Inventory uses auto-filling columns
+with a 96px minimum and 8px gaps. At 390px the six previews form two rows of three.
 
-Rendered reflow was checked at 320, 390, 768, 1120 and 1440px in both themes. This is not a claim
-of physical-device or native browser zoom testing. The interface is English-only; RTL and
-localized layouts are not implemented.
+Tables scroll inside `.tw` instead of widening the page. Their 480px mobile minimum retains
+financial columns; each scroll container has a keyboard stop and accessible name. Source pages
+use explicit `.html` links and selectable, separately scrollable code. Real-data Chromium checks
+covered 320, 390, 768, 1120 and 1440px in both themes without page overflow. The primary hero
+action ends at 420.19px in the 390×844 first screen. Native browser zoom, RTL/localized layouts
+and physical devices remain unverified.
 
 ## Elevation & depth
 
-This is a primarily flat system. Panels use tonal separation and 1px structural outlines.
-Neutral controls retain the reference's subtle inset highlight, `inset 0 1px 0 rgba(255,255,255,.06)`.
-Primary buttons have no shadow. The desktop header is sticky at z-index 20. The wallet uses
-the browser's dialog top layer and a `rgba(0,0,0,.6)` backdrop. Its focus ring is visible over
-the dimmed page. Three.js lights, shadows and metal reflections belong only to the wheel.
+Panels use flat tonal separation and structural 1px outlines. Neutral buttons retain the
+operator's subtle inset white highlight; primary buttons have no shadow. The desktop header
+is sticky at z-index 20 and becomes static on narrow layouts. The wallet uses the native dialog
+top layer with a `rgba(0,0,0,.6)` backdrop. Scenes use Three.js lights and shadows; their depth is
+confined to the artwork. The caption is an opaque flat label over the wheel scene.
 
 ## Shapes
 
-`--r-panel:12px` and `--r-ctl:8px` define panels and controls. The hero has a 16px radius;
-chips use 12px, inventory tiles 8px, step markers 4px, and status dots are 8px circles.
-Inventory art occupies a square. Only the hero, tile artwork and bar treatments intentionally
-clip to their shapes. Text is not ellipsized; compact account links expose their complete value.
+`--r-panel:12px` and `--r-ctl:8px` define panels and controls. The hero has a 16px radius,
+wallet/network chips 12px, inventory tiles 8px, caption and step markers 4px, and status dots
+are 8px circles. Tiles and the hero clip artwork to their shape. Financial values and error
+messages are not ellipsized. Bond progress has a 4px bar, a numeric percentage and accessible
+progress values.
 
 ## Components
 
-- **Buttons and links** (`web/styles.css:53`): `.btn`, `.btn.pri`, `.btn.sm`. Rest, hover,
-  active, focus and disabled states are explicit. Default controls are 36px high, small ones
-  32px, and hero actions 44px. Disabled controls use 40% opacity and cannot send. Focus is a
-  2px accent outline with a 2px offset. The reference's `.98` press scale is retained.
-- **Panels** (`web/index.html`, `web/app.js`): `.panel`, `.ph`, `.pb`, `.kv`, `.tw` organize
-  the same Position, Collateral, Open positions, Squeekchain, Lend, Risk parameters, Revenue
-  and Contracts sections. The read-only/empty state leads to Connect or account lookup.
-- **Account and amount inputs** (`web/index.html`): native text inputs with accessible names;
-  amount fields use `inputmode=decimal`. Enter loads an account. Invalid addresses mark the
-  field and announce a specific correction. RPC failures preserve a retry path through Load.
-- **NFT inventory** (`web/app.js`, `.nft`): native toggle buttons with `aria-pressed`; Enter
-  and Space select wallet-owned NFTs. Custodied/read-only items announce `aria-disabled`.
-  Selection is limited to the vault's 32-NFT cap. On-chain SVGs load as isolated images.
-- **Wallet dialog** (`web/wallet.js`): one connect pattern reused by the header and empty
-  states. Rows are at least 48px high with 28px wallet marks. It lists discovered extensions,
-  phone app links and Coinbase. Escape, backdrop and Close dismiss it; Tab wraps inside and
-  focus returns to the opener. Request errors remain in the dialog. A connected account
-  exposes its full address, Disconnect and a network-switch action when needed.
-- **Transaction feedback** (`web/app.js`): named live regions distinguish confirmation in
-  wallet, pending receipt, confirmed, reverted and rejected states. Buttons lock during an
-  operation. Decimal precision, credit and balance bounds are checked. Receipt links remain
-  available for pending transactions; changing an account cannot continue the prior workflow.
-- **Wheel / gauge** (`web/wheel.js`, `web/app.js`): the operator's wheel geometry and studio
-  lighting are retained with local Three.js. It follows feed RPM, stops offscreen/when hidden
-  and respects reduced motion, including changes while the page is open. Missing WebGL hides
-  the stage and keeps the product/actions usable. The debt gauge has a text equivalent.
-- **Source pages** (`web/tools/build.mjs`): generated from current repository files using the
-  same fonts, surfaces and header. Explicit `.html` links work on static gateways without
-  extensionless routing. Source code remains selectable and scrollable.
+- **Actions** (`web/styles.css:53`): `.btn`, `.pri`, `.sm` have explicit hover, press, focus and
+  disabled states. Standard/small/hero heights are 36/32/44px; wallet rows are at least 48px.
+  Focus is a 2px accent outline with 2px offset. The operator's `.98` press scale is retained.
+  The dense dashboard meets the 24px target baseline; many controls are smaller than the
+  comfortable 44px target, which the probe reports.
+- **Panels and forms** (`web/index.html`): `.panel`, `.ph`, `.pb`, `.kv`, `.form`, `.tw` reuse
+  the same surfaces and reading hierarchy. Inputs have accessible names and nearby unit,
+  fee and maturity explanations. New field errors mark `aria-invalid`, focus the field and
+  announce a correction through a stable status region. Editing clears the invalid state.
+- **Collateral** (`web/app.js:265`, `web/nft3d.js`): six preview IDs are explicitly collection
+  previews, never wallet holdings. `tokenURI` supplies on-chain data-image art; one shared
+  WebGL context produces voxel reliefs copied to tile canvases. Missing WebGL retains the
+  image. Wallet-owned items use native toggle buttons, support Enter/Space and enforce the
+  32-NFT limit. Staked items are not selectable; their depositor is checked.
+- **Wheel and garage** (`web/wheel.js`, `web/garage3d.js`): preserve the operator's clay
+  geometry and lighting using the local `assets/three.min.js`. The wheel follows measured
+  RPM and coasts to rest using elapsed time, including on slow renderers. It stops when
+  hidden/offscreen or the feed fails. Reduced-motion changes stop animation immediately;
+  NFT pointer tilt also honors preference changes. The garage renders once per resize.
+- **Wheel contracts** (`web/app.js:286`): live global stats and versioned account reads for
+  Motors, bonds and garage. Failed reads disable affected actions and expose Load/automatic
+  retry. Stake/garage exit locks, bond progress, maturity, fees, balances and units are
+  visible. The Motors market's on-chain open/closed status is distinct from live hardware RPM.
+  Contract addresses and calldata selectors match the verified deployments.
+- **Wallet sheet** (`web/wallet.js`): preserved EIP-6963 discovery, browser-wallet fallback,
+  four phone links and local Coinbase SDK. There is one shared connection pattern. Escape,
+  Close and backdrop dismissal return focus to the opener; Tab remains in the modal. The
+  wrong chain offers Switch to Sepolia with an add-chain fallback. A connected sheet shows
+  the full address and Disconnect. Real passkey and phone-app handoffs were not exercised.
+- **Transactions** (`web/app.js:550`): one operation locks related controls through approvals
+  and receipt polling. Confirmation, pending, success, revert and rejected states are distinct.
+  Provider/account/chain are checked before sending. Account changes cannot continue an old
+  approval flow. Pending explorer links remain available on a receipt timeout.
 
-The reference's 400ms entrance and 40ms panel stagger are retained. Interaction transitions
-name their properties and use `cubic-bezier(.22,1,.36,1)`. Reduced motion disables entrances,
-spinning indicators, animated wheel motion, transitions and smooth scrolling.
+Entrance animations retain the operator's 400ms timing and 40ms panel stagger. Transitions name
+the properties they affect and use `cubic-bezier(.22,1,.36,1)`. Reduced motion disables entrances,
+spins, tilts, transitions and smooth scrolling. There is no `transition:all`.
 
 ## Do's and don'ts
 
-Use the existing `.wrap`/`.panel`/`.ph` primitives and role tokens for any future adjacent
-page. Use `.btn.pri` for its main action, `.btn` for peers, and `.n`/`.m` for numeric data.
-Keep the established density, full-width data and native controls. Preserve source paths and
-relative asset URLs when adding another static page. Do not introduce a new font, palette,
-decorative hero or framework just to extend this site. Do not present mock or cached test data
-as live chain state.
+Start an adjacent surface with `.wrap`, `.panel`, `.ph` and `.pb`, using the existing role tokens.
+Use `.btn.pri` for its main action, neutral `.btn` for peers and `.n` for data. Keep unit labels,
+fees and consequential terms beside controls. Keep runtime scripts, fonts and images inside
+`assets/` or beside `index.html`, with relative URLs. Extend the build's integrity checks when
+adding another asset type. Never introduce a `vendor/` or `node_modules/` runtime directory,
+external script dependency, fabricated live balance or hidden transaction result.
 
-The review method follows the pinned Better Interface guidance by Jakub Krehel (MIT,
-`267330e1adfc66a718fb65fa6918c1f06d0a689e`) and the documentation method from Paul Bakaus's
-Impeccable (Apache-2.0, `9d715cc4f5564a990ca8345abfdd5df6dc9b41c8`). Notices are retained in
-`web/licenses/Design-guidance.txt`; the visual design remains the operator's reference.
+Design review follows Jakub Krehel's Better Interface (MIT,
+`267330e1adfc66a718fb65fa6918c1f06d0a689e`); the documentation method follows Paul Bakaus's
+Impeccable (Apache-2.0, `9d715cc4f5564a990ca8345abfdd5df6dc9b41c8`). Their notices remain in
+`web/licenses/Design-guidance.txt`. The visual identity remains the operator's reference.

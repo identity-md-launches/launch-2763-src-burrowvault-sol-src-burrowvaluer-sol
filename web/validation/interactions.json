@@ -79,7 +79,63 @@
     {
       "name": "All deployed source links work without extensionless route rewrites",
       "passed": true
+    },
+    {
+      "name": "Wheel: Six on-chain tokenURI previews become voxel canvases; wheel and garage render",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Wheel panels read all three configured Sepolia contracts",
+      "passed": true
+    },
+    {
+      "name": "Wheel: HMTR mint approves bSQK to Hamster Motors then sends mint with minimum output",
+      "passed": true
+    },
+    {
+      "name": "Wheel: HMTR redeem, stake and unstake target the live share token",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Wheel amount/term validation rejects unsafe input without a wallet request",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Wheel bond lock approves the bond contract and encodes shares and work term",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Mature and early wheel bond actions use the correct selectors and IDs",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Garage park approves HMTR to the garage and sends the exact amount",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Garage claim and leave send the loaded spot to the configured garage",
+      "passed": true
+    },
+    {
+      "name": "Wheel: The 200-work stake wait disables unstake and garage leave",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Wrong-network state disables every wheel write and network switching recovers",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Changing accounts during approval prevents the follow-on HMTR mint",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Failed account reads disable stale row actions and Load recovers",
+      "passed": true
+    },
+    {
+      "name": "Wheel: Hero animation follows RPM, stops at idle, and honors changing reduced motion",
+      "passed": true
     }
   ],
-  "webkit": "Not run: WebKit launch failed because required host libraries are unavailable. browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Missing libraries:                                   ║\n║     libgtk-4.so.1                                    ║\n║     libpangocairo-1.0.so.0                           ║\n║     libgdk_pixbuf-2.0.so.0                "
+  "webkit": "Not run: WebKit launch failed because required host libraries are unavailable. browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Missing libraries:                                   ║\n║     libgstreamer-1.0.so.0                            ║\n║     libgtk-4.so.1                                    ║\n║     libpangocairo-1.0.so.0                "
 }

@@ -1,16 +1,24 @@
 {
-  "measure": "Added files plus full modified file contents; excludes this small report itself and ignores scratch/input directories.",
-  "submissionPaths": 88,
-  "contentBytes": 2956955,
-  "budgetBytes": 8388608,
-  "withinBudget": true,
-  "distFiles": 37,
-  "distBytes": 1354649,
-  "modifiedExistingPaths": [
-    "README.md"
-  ],
+  "checkedAt": "2026-11-01T06:30:18.894Z",
+  "passed": true,
+  "protectedPathsUnchanged": true,
+  "soliditySourcesAndTestsUnchanged": true,
+  "gitDiffCheckPassed": true,
+  "forbiddenRuntimeDirectories": [],
+  "runtimeArchivesOrCaches": [],
   "sourceExportIdentical": true,
-  "ignoreFilesChanged": false,
-  "dependencyTreesIncluded": false,
-  "gitSubmodulesAdded": false
+  "configIdenticalToOperatorCapture": true,
+  "threeIdenticalToOperatorCapture": true,
+  "configSha256": "d59315224591ebfe20d74b927d586979000b614addac4184e3583204dd818f02",
+  "export": {
+    "files": 47,
+    "references": 132,
+    "bytes": 1455929
+  },
+  "submissionBudget": {
+    "limitBytes": 8388608,
+    "rawChangedFileBytes": 3701625,
+    "countedFiles": 97,
+    "method": "Conservative sum of full new/modified deliverable files; deletions, ignored assignment inputs and disposable test/scratch are excluded."
+  }
 }

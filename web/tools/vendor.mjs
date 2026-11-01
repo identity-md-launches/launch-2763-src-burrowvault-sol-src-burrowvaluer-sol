@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 const web = fileURLToPath(new URL('../', import.meta.url));
 const modules = fileURLToPath(new URL('../../test/scratch/site-tooling/node_modules/', import.meta.url));
-await copyFile(join(modules, 'three/build/three.module.min.js'), join(web, 'vendor/three.module.min.js'));
+// assets/three.min.js is the operator's exact global build; preserve it.
 await copyFile(join(modules, 'three/LICENSE'), join(web, 'licenses/Three-MIT.txt'));
 await build({
   entryPoints: [join(modules, '@coinbase/wallet-sdk/dist/index.js')],
-  outfile: join(web, 'vendor/coinbase.js'), bundle: true, format: 'esm',
+  outfile: join(web, 'assets/coinbase.js'), bundle: true, format: 'esm',
   platform: 'browser', target: 'es2022', minify: true, legalComments: 'eof',
   define: { 'process.env.NODE_ENV': '"production"' },
 });

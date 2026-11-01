@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Burrow</title>
-<meta name="description" content="Borrow SQK against Squeek NFTs on Sepolia. The collateral keeps mining on Squeekchain and its rewards pay the loan down.">
+<meta name="description" content="Burrow is a small financial district on Squeekchain that keeps hamster hours: loans, bonds and a share token that all run on one real wheel.">
 <link rel="preconnect" href="https://api.squeekchain.com" crossorigin>
 <link rel="preconnect" href="https://ethereum-sepolia-rpc.publicnode.com" crossorigin>
 <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
-<meta property="og:title" content="Burrow — Borrow SQK against Squeek NFTs">
-<meta property="og:description" content="Collateral keeps mining on Squeekchain. Its rewards pay the loan down. Sepolia testnet only.">
+<meta property="og:title" content="Burrow · A market on hamster hours">
+<meta property="og:description" content="Wheel bonds, Hamster Motors and Squeek NFT loans on Sepolia.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="./assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Burrow: borrow SQK against Squeek NFTs, beside the Squeekchain hamster wheel.">
+<meta property="og:image:alt" content="Burrow: a money market on hamster hours, beside a clay hamster wheel.">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="./assets/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./assets/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -49,11 +49,11 @@
 
   <section class="hero enter" aria-labelledby="h1">
     <div class="hero-copy">
-      <h1 id="h1">Borrow SQK against your Squeek NFTs</h1>
-      <p>The NFT stays staked on Squeekchain with the vault as claim recipient, so the hamster's mining rewards pay the loan down by themselves.</p>
+      <h1 id="h1">A market on hamster hours</h1>
+      <p>Loans, bonds and Hamster Motors shares run on one real wheel.</p>
       <div class="hero-act">
-        <a class="btn pri" href="#position">Open a position</a>
-        <a class="btn" href="#lend-panel">Lend SQK</a>
+        <a class="btn pri" href="#stock-panel">Buy into Hamster Motors</a>
+        <a class="btn" href="#bond-panel">Lock a wheel bond</a>
       </div>
       <dl class="facts">
         <div><dt>Loan to value</dt><dd>60%</dd></div>
@@ -128,6 +128,33 @@
         <tbody id="liq"><tr><td colspan="6" class="muted">Reading events</td></tr></tbody></table></div>
       </section>
 
+      <section class="panel enter" id="stock-panel">
+        <div class="ph"><h2>Hamster Motors</h2><span class="hint">HMTR · every car is a wheel, the CEO is a hamster</span></div>
+        <dl class="kv pb" id="hmStats"><dt>Hamster Motors</dt><dd>Reading Sepolia…</dd></dl>
+        <p class="note" id="hmHelp">Mint with bSQK. Redeem or stake with HMTR. Exit fee: 1% when open, 5% when closed. Market status follows settled wheel work. Unstaking waits for 200 work.</p>
+        <div class="form ruled" id="hmForm">
+          <input id="hmAmt" type="text" inputmode="decimal" placeholder="Amount" aria-label="bSQK to mint, or HMTR to redeem or stake" aria-describedby="hmHelp hmStatus">
+          <button class="btn pri" id="hmMint" disabled>Mint</button>
+          <button class="btn" id="hmRedeem" disabled>Redeem</button>
+          <button class="btn" id="hmStake" disabled>Stake</button>
+        </div>
+        <div class="form flush"><span class="hint" id="hmMine">Connect a wallet to mint with bSQK, redeem or stake HMTR</span><span></span><span></span>
+          <button class="btn sm" id="hmUnstake" disabled>Unstake all</button></div>
+        <div class="status" id="hmStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+      </section>
+      <section class="panel enter" id="garage-panel">
+        <div class="ph"><h2>Garage</h2><span class="hint">park HMTR 30 days, drive off with a car</span></div>
+        <canvas id="garage3d" role="img" aria-label="A clay garage with a hamster driving an orange car"></canvas>
+        <dl class="kv pb" id="gStats"><dt>Garage</dt><dd>Reading Sepolia…</dd></dl>
+        <p class="note" id="gHelp">Park at least 100 HMTR. After 30 days, claim a car. Leaving early forfeits an unclaimed car; leaving waits for the garage’s 200-work stake lock.</p>
+        <div class="form two ruled">
+          <input id="gAmt" type="text" inputmode="decimal" placeholder="HMTR amount, at least 100" aria-label="HMTR to park" aria-describedby="gHelp gStatus">
+          <button class="btn pri" id="gPark" disabled>Park</button><span></span>
+        </div>
+        <div class="tw" id="gList" tabindex="0" role="region" aria-label="Scrollable garage spots" hidden><table><thead><tr><th>Spot</th><th class="n">HMTR</th><th>Car ready</th><th></th></tr></thead><tbody id="gRows"></tbody></table></div>
+        <div class="status" id="gStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
     </div>
 
     <div class="col">
@@ -152,6 +179,21 @@
         <div class="status" id="lendStatus" role="status" aria-live="polite" aria-atomic="true"></div>
       </section>
 
+      <section class="panel enter" id="bond-panel">
+        <div class="ph"><h2>Wheel bonds</h2><span class="hint">mature in wheel work, not days</span></div>
+        <dl class="kv pb" id="bondStats"><dt>Wheel bonds</dt><dd>Reading Sepolia…</dd></dl>
+        <p class="note" id="bondHelp">Lock bSQK for 500 to 1,000,000 wheel work. Early exit forfeits the bonus and costs up to 20% of principal.</p>
+        <div class="form two ruled" id="bondForm">
+          <input id="bondAmt" type="text" inputmode="decimal" placeholder="bSQK amount" aria-label="bSQK amount to lock" aria-describedby="bondHelp bondStatus">
+          <input id="bondTerm" class="term" type="text" inputmode="numeric" value="1000" aria-label="Term in work units" aria-describedby="bondPace bondStatus">
+          <button class="btn pri" id="bondLock" disabled>Lock</button>
+        </div>
+        <p class="bondnote" id="bondPace"></p>
+        <div class="tw" id="bondList" tabindex="0" role="region" aria-label="Scrollable wheel bonds" hidden><table><thead><tr><th>Bond</th><th class="n">bSQK</th><th>Wheel</th><th class="n">Bonus</th><th></th></tr></thead>
+        <tbody id="bondRows"></tbody></table></div>
+        <div class="status" id="bondStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
       <section class="panel enter">
         <div class="ph"><h2>Risk parameters</h2><span class="sp"></span><span class="flag">48 h timelock</span></div>
         <dl class="kv pb" id="params"><dt>Parameters</dt><dd>Reading Sepolia…</dd></dl>
@@ -173,7 +215,7 @@
 </main>
 
 <footer class="foot">
-  <p>Burrow lends SQK against Squeek NFTs. Collateral is escrowed, re-staked on Squeekchain with the vault as claim recipient, so mining rewards pay the debt down; rewards above the debt go back to the borrower. There is no NFT price feed on this chain, so valuation is power-based: the price per power unit is a governed parameter behind a 48-hour timelock, capped at 20% per change, and liquidation is frozen for an hour after any change.</p>
+  <p>Burrow has three parts. Loans: lend SQK, or borrow it against Squeek NFTs. Wheel bonds: lock bSQK for a term counted in wheel work, leave early for a falling penalty. Hamster Motors: a test share token backed by bSQK, whose exit fees pay stakers, the share price and a cheek pouch that empties when the hamster runs. Parking HMTR in the garage keeps it compounding, and 30 days parked earns a Hamster Motors car, an on-chain NFT. HMTR is a Sepolia token with no value and is not a security. On loans, collateral is escrowed, re-staked on Squeekchain with the vault as claim recipient, so mining rewards pay the debt down; rewards above the debt go back to the borrower. There is no NFT price feed on this chain, so valuation is power-based: the price per power unit is a governed parameter behind a 48-hour timelock, capped at 20% per change, and liquidation is frozen for an hour after any change.</p>
   <p>Deployed source, tests and README: <a href="./source/index.html">burrow-squeek.vercel.app/source</a>; every contract is a Sourcify exact match. Unaudited. Sepolia testnet only, SQK has no value. The page reads the Squeekchain API and Sepolia over <code>eth_call</code>; Squeek art comes from the collection's own on-chain renderer.</p>
 </footer>
 <dialog id="walletDialog" aria-labelledby="walletTitle">
@@ -182,6 +224,9 @@
   <p id="walletStatus" class="hint" role="status" aria-live="polite"></p>
 </dialog>
 <noscript><p class="foot">Enable JavaScript to read live Squeekchain data and connect a wallet. Contract sources are available from the footer.</p></noscript>
+<script src="assets/three.min.js"></script>
+<script src="nft3d.js"></script>
+<script src="garage3d.js" defer></script>
 <script type="module" src="wheel.js"></script>
 <script type="module" src="app.js"></script>
 </body>

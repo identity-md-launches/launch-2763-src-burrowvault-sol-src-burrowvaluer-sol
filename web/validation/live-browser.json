@@ -1,0 +1,198 @@
+{
+  "checkedAt": "2026-11-01T06:22:20.506Z",
+  "passed": true,
+  "errors": [],
+  "missing": [],
+  "scripts": [
+    "app.js",
+    "config.js",
+    "nft3d.js",
+    "wheel.js",
+    "garage3d.js",
+    "assets/three.min.js",
+    "wallet.js"
+  ],
+  "views": [
+    {
+      "colorScheme": "light",
+      "width": 320,
+      "scrollWidth": 320,
+      "actionBottom": 420.1875,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "light",
+      "width": 390,
+      "scrollWidth": 390,
+      "actionBottom": 420.1875,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "light",
+      "width": 768,
+      "scrollWidth": 768,
+      "actionBottom": 377.375,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "light",
+      "width": 1120,
+      "scrollWidth": 1120,
+      "actionBottom": 366.6875,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "light",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "actionBottom": 363.296875,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "dark",
+      "width": 320,
+      "scrollWidth": 320,
+      "actionBottom": 420.1875,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "dark",
+      "width": 390,
+      "scrollWidth": 390,
+      "actionBottom": 420.1875,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "dark",
+      "width": 768,
+      "scrollWidth": 768,
+      "actionBottom": 377.375,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "dark",
+      "width": 1120,
+      "scrollWidth": 1120,
+      "actionBottom": 366.6875,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    },
+    {
+      "colorScheme": "dark",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "actionBottom": 363.296875,
+      "fonts": [
+        {
+          "family": "Geist",
+          "status": "loaded"
+        },
+        {
+          "family": "Geist Mono",
+          "status": "loaded"
+        }
+      ]
+    }
+  ],
+  "configIdenticalToOperator": true,
+  "scriptPolicy": "script-src 'self'; object-src 'none'; base-uri 'self'",
+  "live": {
+    "feed": "synced 0 s ago",
+    "rpm": 0,
+    "caption": "Idle, at rest",
+    "voxelPreviews": 6,
+    "three": "160",
+    "bonds": "Locked\n10,000.00 bSQK\nWheel clock\n66,132 work\nBonds issued\n1\nEarly exit\nup to 20%, falling to 0",
+    "stock": "Market\nopen\nExit fee\n1%\nNAV per share\n1.0000 bSQK\nBacking\n100,000.00 bSQK\nShares issued\n100,000.00 HMTR\nStaked back\n10,000.00 HMTR\nCheek pouch\n0.00 bSQK\nFee split\n50% stakers, 25% price, 25% cheeks\nCheeks empty\nevery 500 work",
+    "garage": "Parked\n0.00 HMTR\nSpots taken\n0\nCars delivered\n0\nHold\n30 days"
+  },
+  "lightCaption": {
+    "color": "rgb(85, 82, 77)",
+    "background": "rgb(253, 252, 250)"
+  },
+  "darkCaption": {
+    "color": "rgb(169, 167, 162)",
+    "background": "rgb(26, 26, 25)"
+  },
+  "walletFocusReturned": true
+}

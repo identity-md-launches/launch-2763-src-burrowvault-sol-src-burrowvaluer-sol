@@ -100,7 +100,7 @@ function render() {
   if (mobile()) {
     const url = location.href;
     const links = [
-      ['MetaMask', './assets/metaMask.svg', 'https://metamask.app.link/dapp/' + url.replace(/^https?:\/\//, '')],
+      ['MetaMask', './assets/metaMask.svg', 'https://link.metamask.io/dapp/' + url.replace(/^https?:\/\//, '')],
       ['Coinbase Wallet', './assets/coinbase.svg', 'https://go.cb-w.com/dapp?cb_url=' + encodeURIComponent(url)],
       ['Rabby', './assets/rabby.svg', 'https://go.rabby.io/mobile/dapp?url=' + encodeURIComponent(url)],
       ['Phantom', './assets/phantom.svg', 'https://phantom.app/ul/browse/' + encodeURIComponent(url) + '?ref=' + encodeURIComponent(location.origin)],
@@ -117,7 +117,7 @@ function render() {
     const hint = document.createElement('p'); hint.className = 'hint'; hint.textContent = 'No browser wallet found. Open this page in a wallet browser or use Coinbase Smart Wallet.'; rows.append(hint);
   }
   row(mobile() ? 'Coinbase Smart Wallet' : 'Coinbase Wallet', './assets/coinbase.svg', async () => {
-    const { createCoinbaseWalletSDK } = await import('./vendor/coinbase.js');
+    const { createCoinbaseWalletSDK } = await import('./assets/coinbase.js');
     const sdk = createCoinbaseWalletSDK({ appName: 'Burrow', appLogoUrl: new URL('./assets/favicon.svg', location.href).href,
       appChainIds: [C.chainId], preference: { options: 'smartWalletOnly' } });
     await connect(sdk.getProvider());

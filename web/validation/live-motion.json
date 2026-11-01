@@ -1,0 +1,17 @@
+{
+  "source": "https://api.squeekchain.com/v1",
+  "method": "Manual production-export browser inspection; no mock feed; reduced motion off; wheel scene in viewport.",
+  "start": {
+    "at": "2026-11-01T06:23:41.505Z",
+    "rpm": 72.126,
+    "caption": "Running, 72.1 rpm"
+  },
+  "end": {
+    "at": "2026-11-01T06:23:57.407Z",
+    "rpm": 40.836,
+    "caption": "Running, 40.8 rpm",
+    "requestAnimationFrameCallbacks": 56
+  },
+  "screenshot": "screenshots/wheel-live-390.png",
+  "limits": "Counts browser animation callbacks, not physical wheel rotations. Rendering uses the reported hardware RPM. Physical hardware not directly inspected."
+}

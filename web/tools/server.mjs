@@ -12,7 +12,7 @@ export function previewServer(root) {
       if (path !== resolve(root) && !path.startsWith(resolve(root) + sep)) throw new Error('Invalid path');
       if ((await stat(path)).isDirectory()) path = resolve(path, 'index.html');
       const data = await readFile(path);
-      res.writeHead(200, { 'Content-Type': types[extname(path)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); res.end(data);
+      res.writeHead(200, { 'Content-Type': types[extname(path)] || 'application/octet-stream', 'Cache-Control': 'no-store', 'Content-Security-Policy': "script-src 'self'; object-src 'none'; base-uri 'self'" }); res.end(data);
     } catch { res.writeHead(404); res.end('Not found'); }
   });
 }

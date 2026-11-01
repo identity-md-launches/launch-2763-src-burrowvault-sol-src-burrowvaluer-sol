@@ -1,0 +1,162 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>src/HamsterGarage.sol · Burrow source</title><meta name="description" content="Burrow source, tests and deployment record"><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="../styles.css"><style>pre{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:16px;overflow:auto;font:12px/18px var(--mono);tab-size:4}.wrap{max-width:1100px}.source-address{overflow-wrap:anywhere;white-space:normal}.source-table{overflow:auto}.source-table a{display:inline-block;min-height:24px}.source-list a{border:0}.source-header{flex-wrap:wrap;height:auto;min-height:64px;gap:8px;padding-block:12px}.source-header .chip{white-space:normal}</style></head><body><header class="top"><div class="topin source-header"><a class="brand" href="../index.html" style="border:0">Burrow</a><span class="chip">source, exactly what is deployed</span><span class="sp"></span><a class="chip" href="./index.html">all files</a></div></header><main class="wrap"><section class="panel"><div class="ph"><h1 style="font-size:16px">src/HamsterGarage.sol</h1></div><pre tabindex="0" aria-label="src/HamsterGarage.sol source"><code>// SPDX-License-Identifier: MIT
+pragma solidity 0.8.26;
+
+interface IHMTR {
+    function transferFrom(address f, address t, uint256 v) external returns (bool);
+    function transfer(address t, uint256 v) external returns (bool);
+    function approve(address s, uint256 v) external returns (bool);
+    function stake(uint256 shares) external returns (uint256);
+    function unstake(uint256 units) external returns (uint256);
+    function unitsOf(address who) external view returns (uint256);
+    function stakedShares() external view returns (uint256);
+    function totalUnits() external view returns (uint256);
+}
+interface IERC721Receiver { function onERC721Received(address, address, uint256, bytes calldata) external returns (bytes4); }
+
+/// @title HamsterGarage
+/// @notice Park HMTR here and the garage stakes it back, so the position keeps compounding exit fees.
+///         After 30 days parked the owner can claim one Hamster Motors car, an on-chain ERC-721.
+///         Parking can end at any time, keeping the compounded HMTR but forfeiting an unclaimed car.
+///         There is no owner and no admin.
+contract HamsterGarage {
+    string public constant name = &quot;Hamster Motors Car&quot;;
+    string public constant symbol = &quot;HCAR&quot;;
+    uint256 public constant HOLD = 30 days;
+    uint256 public constant MIN_PARK = 100e18;   // makes restarting the stake wait expensive to grief
+
+    IHMTR public immutable hmtr;
+
+    struct Spot { address owner; uint64 parkedAt; bool claimed; uint256 units; uint256 shares; }
+    mapping(uint256 =&gt; Spot) public spots;
+    uint256 public nextSpot = 1;
+    uint256 public nextCar = 1;
+
+    mapping(uint256 =&gt; address) private _owner;
+    mapping(address =&gt; uint256) public balanceOf;
+    mapping(uint256 =&gt; address) public getApproved;
+    mapping(address =&gt; mapping(address =&gt; bool)) public isApprovedForAll;
+    mapping(uint256 =&gt; uint256) public carParkedShares;   // size of the position that earned the car
+
+    error Small();
+    error NotOwner();
+    error TooSoon(uint256 readyAt);
+    error Claimed();
+    error NotApproved();
+    error BadReceiver();
+
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event Approval(address indexed owner, address indexed spender, uint256 indexed tokenId);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    event Parked(uint256 indexed spot, address indexed owner, uint256 shares, uint256 units);
+    event Left(uint256 indexed spot, address indexed owner, uint256 shares);
+    event CarClaimed(uint256 indexed spot, address indexed owner, uint256 carId);
+
+    constructor(address hmtr_) {
+        hmtr = IHMTR(hmtr_);
+        IHMTR(hmtr_).approve(hmtr_, type(uint256).max);
+    }
+
+    function readyAt(uint256 id) public view returns (uint256) { return uint256(spots[id].parkedAt) + HOLD; }
+
+    /// @return current HMTR value of the spot, including compounded fees
+    function valueOf(uint256 id) external view returns (uint256) {
+        uint256 t = hmtr.totalUnits();
+        return t == 0 ? 0 : spots[id].units * hmtr.stakedShares() / t;
+    }
+
+    function park(uint256 shares) external returns (uint256 id) {
+        if (shares &lt; MIN_PARK) revert Small();
+        hmtr.transferFrom(msg.sender, address(this), shares);
+        uint256 units = hmtr.stake(shares);
+        id = nextSpot++;
+        spots[id] = Spot(msg.sender, uint64(block.timestamp), false, units, shares);
+        emit Parked(id, msg.sender, shares, units);
+    }
+
+    function claimCar(uint256 id) public returns (uint256 car) {
+        Spot storage s = spots[id];
+        if (s.owner != msg.sender) revert NotOwner();
+        if (s.claimed) revert Claimed();
+        if (block.timestamp &lt; readyAt(id)) revert TooSoon(readyAt(id));
+        s.claimed = true;
+        car = nextCar++;
+        carParkedShares[car] = s.shares;
+        _owner[car] = msg.sender;
+        balanceOf[msg.sender]++;
+        emit Transfer(address(0), msg.sender, car);
+        emit CarClaimed(id, msg.sender, car);
+    }
+
+    function leave(uint256 id) external returns (uint256 out) {
+        Spot memory s = spots[id];
+        if (s.owner != msg.sender) revert NotOwner();
+        delete spots[id];
+        out = hmtr.unstake(s.units);
+        hmtr.transfer(msg.sender, out);
+        emit Left(id, msg.sender, out);
+    }
+
+    // --- ERC-721 ---
+    function ownerOf(uint256 id) public view returns (address o) {
+        o = _owner[id];
+        if (o == address(0)) revert NotOwner();
+    }
+
+    function supportsInterface(bytes4 i) external pure returns (bool) {
+        return i == 0x01ffc9a7 || i == 0x80ac58cd || i == 0x5b5e139f;
+    }
+
+    function approve(address to, uint256 id) external {
+        address o = ownerOf(id);
+        if (msg.sender != o &amp;&amp; !isApprovedForAll[o][msg.sender]) revert NotApproved();
+        getApproved[id] = to;
+        emit Approval(o, to, id);
+    }
+
+    function setApprovalForAll(address op, bool ok) external {
+        isApprovedForAll[msg.sender][op] = ok;
+        emit ApprovalForAll(msg.sender, op, ok);
+    }
+
+    function transferFrom(address from, address to, uint256 id) public {
+        address o = ownerOf(id);
+        if (o != from || to == address(0)) revert NotOwner();
+        if (msg.sender != o &amp;&amp; msg.sender != getApproved[id] &amp;&amp; !isApprovedForAll[o][msg.sender]) revert NotApproved();
+        delete getApproved[id];
+        balanceOf[from]--; balanceOf[to]++;
+        _owner[id] = to;
+        emit Transfer(from, to, id);
+    }
+
+    function safeTransferFrom(address from, address to, uint256 id) external { safeTransferFrom(from, to, id, &quot;&quot;); }
+
+    function safeTransferFrom(address from, address to, uint256 id, bytes memory data) public {
+        transferFrom(from, to, id);
+        if (to.code.length != 0 &amp;&amp; IERC721Receiver(to).onERC721Received(msg.sender, from, id, data) != IERC721Receiver.onERC721Received.selector) revert BadReceiver();
+    }
+
+    /// @notice A car drawn on-chain. Paint comes from the token id, plain rgb() so the SVG needs no escaping.
+    function tokenURI(uint256 id) external view returns (string memory) {
+        ownerOf(id);
+        uint256 h = uint256(keccak256(abi.encode(id)));
+        string memory paint = string.concat(&quot;rgb(&quot;, _s(80 + h % 170), &quot;,&quot;, _s(80 + (h &gt;&gt; 8) % 170), &quot;,&quot;, _s(80 + (h &gt;&gt; 16) % 170), &quot;)&quot;);
+        string memory svg = string.concat(
+            &quot;&lt;svg xmlns=&#39;http://www.w3.org/2000/svg&#39; viewBox=&#39;0 0 320 320&#39;&gt;&lt;rect width=&#39;320&#39; height=&#39;320&#39; fill=&#39;rgb(11,10,9)&#39;/&gt;&quot;,
+            &quot;&lt;path d=&#39;M50 200h220v-30l-44-8-30-44h-70l-34 44-42 12z&#39; fill=&#39;&quot;, paint, &quot;&#39;/&gt;&quot;,
+            &quot;&lt;circle cx=&#39;104&#39; cy=&#39;206&#39; r=&#39;30&#39; fill=&#39;none&#39; stroke=&#39;rgb(196,199,203)&#39; stroke-width=&#39;8&#39;/&gt;&lt;circle cx=&#39;216&#39; cy=&#39;206&#39; r=&#39;30&#39; fill=&#39;none&#39; stroke=&#39;rgb(196,199,203)&#39; stroke-width=&#39;8&#39;/&gt;&quot;,
+            &quot;&lt;circle cx=&#39;104&#39; cy=&#39;206&#39; r=&#39;5&#39; fill=&#39;rgb(210,160,74)&#39;/&gt;&lt;circle cx=&#39;216&#39; cy=&#39;206&#39; r=&#39;5&#39; fill=&#39;rgb(210,160,74)&#39;/&gt;&quot;,
+            &quot;&lt;circle cx=&#39;168&#39; cy=&#39;142&#39; r=&#39;15&#39; fill=&#39;rgb(217,154,78)&#39;/&gt;&lt;circle cx=&#39;158&#39; cy=&#39;128&#39; r=&#39;5&#39; fill=&#39;rgb(233,166,160)&#39;/&gt;&lt;circle cx=&#39;178&#39; cy=&#39;128&#39; r=&#39;5&#39; fill=&#39;rgb(233,166,160)&#39;/&gt;&lt;/svg&gt;&quot;
+        );
+        return string.concat(&quot;data:application/json;utf8,{\&quot;name\&quot;:\&quot;Hamster Motors Car #&quot;, _s(id), &quot;\&quot;,\&quot;description\&quot;:\&quot;Earned by parking HMTR for 30 days.\&quot;,\&quot;image\&quot;:\&quot;data:image/svg+xml;utf8,&quot;, svg, &quot;\&quot;}&quot;);
+    }
+
+    function _s(uint256 v) private pure returns (string memory) {
+        if (v == 0) return &quot;0&quot;;
+        uint256 n = v; uint256 d;
+        while (n != 0) { d++; n /= 10; }
+        bytes memory b = new bytes(d);
+        while (v != 0) { b[--d] = bytes1(uint8(48 + v % 10)); v /= 10; }
+        return string(b);
+    }
+}
+</code></pre></section></main></body></html>

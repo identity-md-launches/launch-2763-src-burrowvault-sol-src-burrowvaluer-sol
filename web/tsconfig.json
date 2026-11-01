@@ -9,6 +9,6 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true
   },
-  "include": ["app.js", "config.js", "wallet.js", "wheel.js", "types.d.ts"],
-  "exclude": ["vendor", "tools"]
+  "include": ["app.js", "config.js", "wallet.js", "wheel.js", "nft3d.js", "garage3d.js", "types.d.ts"],
+  "exclude": ["assets", "tools"]
 }
